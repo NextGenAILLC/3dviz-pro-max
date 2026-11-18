@@ -1,76 +1,447 @@
 import * as THREE from 'three';
-import {createCameraRig} from './camera-orbit-follow.js';
-import {createStudioRig} from './lighting-studio.js';
-import {createRenderLoop} from './render-loop.js';
-import {applyEmbed,applyPlate} from './page-chrome.js';
-import {installViewer} from './viewer-contract.js';
-import {NIGHT_VIEWS,createNightLighting} from './breadth/src/night-lighting.js';
+import { applyPlate, applyEmbed } from './page-chrome.js';
+import { createRenderLoop } from './render-loop.js';
+import { createCameraRig } from './camera-orbit-follow.js';
+import { createStudioRig } from './lighting-studio.js';
+import { LOOKS } from './breadth/src/looks.js';
+import { createNightLighting, NIGHT_VIEWS } from './breadth/src/night-lighting.js';
 
-const $=selector=>document.querySelector(selector);
-let controlSync=[],lastStats='';
-
-function disposeGroup(group){
- const geometries=new Set(),materials=new Set(),textures=new Set(),skeletons=new Set();
- group?.traverse(object=>{if(object.geometry)geometries.add(object.geometry);if(object.skeleton)skeletons.add(object.skeleton);for(const material of [object.material].flat().filter(Boolean)){materials.add(material);for(const value of Object.values(material))if(value?.isTexture)textures.add(value);}});
- skeletons.forEach(skeleton=>skeleton.dispose?.());textures.forEach(texture=>texture.dispose());materials.forEach(material=>material.dispose());geometries.forEach(geometry=>geometry.dispose());group?.removeFromParent();
+function createBackgroundTexture(zenith, horizon) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 4;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0, zenith);
+  grad.addColorStop(1, horizon);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 4, 256);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
 }
 
-function setCopy(meta,model){
- document.documentElement.style.setProperty('--accent',meta.accent||'#78b9b2');
- document.title=`${meta.title||model.title} — 3Dviz Pro Max`;
- $('#kicker').textContent=meta.kicker||meta.category||'INTERACTIVE 3D STUDY';
- $('#title').textContent=meta.title||model.title;
- $('#description').textContent=meta.description||model.description||'';
- $('#model-note').textContent=model.note||model.description||meta.description||'An authored interactive study.';
- $('#craft-note').textContent=model.craft||meta.craft||'';
- const sources=$('#sources');sources.replaceChildren();
- for(const source of model.sources||meta.sources||[]){const link=document.createElement('a');link.href=source.url;link.textContent=source.title;link.target='_blank';link.rel='noopener noreferrer';sources.append(link);}
- $('#about').hidden=!model.note&&!model.description&&!meta.description&&!model.craft&&!(model.sources||meta.sources)?.length;
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value ?? '';
 }
 
-function addStudyControls(model,invalidate){
- const panel=$('#subject-controls');panel.replaceChildren();controlSync=[];
- for(const control of model.controls||[]){const row=document.createElement('div');row.className='control-row';
-  if(control.type==='button'){const button=document.createElement('button');button.type='button';button.className='action';const sync=()=>button.textContent=control.getLabel?.()??control.label;button.onclick=()=>{control.set?.();model.update?.(0);syncAll(model);invalidate();};sync();controlSync.push(sync);row.append(button);}
-  else{const label=document.createElement('label'),heading=document.createElement('span'),output=document.createElement('output');heading.textContent=control.label;label.append(heading,output);const input=document.createElement(control.type==='select'?'select':'input');
-   input.setAttribute('aria-label',control.label);if(control.type==='select')for(const choice of control.options||[]){const option=document.createElement('option');option.value=choice.value;option.textContent=choice.label;input.append(option);}else{input.type='range';input.min=control.min;input.max=control.max;input.step=control.step??.01;}
-   const sync=()=>{const value=control.get?.()??control.value??control.min;input.value=value;output.textContent=control.type==='select'?'':typeof value==='number'?Number(value.toFixed(3)).toString():value;};
-   input.addEventListener(control.type==='select'?'change':'input',()=>{control.set(control.type==='select'?input.value:Number(input.value));model.update?.(0);syncAll(model);invalidate();});sync();controlSync.push(sync);label.append(input);row.append(label);
-  }panel.append(row);
- }
+function formatRangeValue(value, step) {
+  const s = String(step ?? 0.01);
+  const decimals = s.includes('.') ? s.split('.')[1].length : 0;
+  return Number(value).toFixed(decimals);
 }
 
-function paintStats(model){const panel=$('#readouts'),stats=(model.stats?.()||[]).slice(0,4),key=JSON.stringify(stats);if(key===lastStats)return;lastStats=key;panel.replaceChildren();for(const stat of stats){const item=document.createElement('div'),label=document.createElement('span'),value=document.createElement('strong');label.textContent=stat.label;value.textContent=stat.value;item.append(label,value);panel.append(item);}panel.hidden=!stats.length;}
-function syncAll(model){controlSync.forEach(sync=>sync());paintStats(model);}
+export async function mountScene({
+  meta = {},
+  createScene,
+  kind = 'art-science',
+  look = null,
+  nightName = null,
+  views: customViews = null,
+} = {}) {
+  applyPlate(document, window.location.search);
+  applyEmbed(document, window.location.search);
 
-function gradientSky(zenith='#0d0f12',horizon='#1c2026'){
- const source=Object.assign(document.createElement('canvas'),{width:1,height:256}),context=source.getContext('2d'),gradient=context.createLinearGradient(0,0,0,256);gradient.addColorStop(0,zenith);gradient.addColorStop(1,horizon);context.fillStyle=gradient;context.fillRect(0,0,1,256);const texture=new THREE.CanvasTexture(source);texture.colorSpace=THREE.SRGBColorSpace;return texture;
-}
+  if (meta.accent) {
+    document.documentElement.style.setProperty('--accent', meta.accent);
+  }
 
-export async function mountScene({meta,createScene,kind='study',look='craft',nightName=null,views=null}){
- applyPlate(document,location.search);applyEmbed(document,location.search);
- window.__sceneReady=false;const canvas=$('#world'),viewport=$('#viewport');let renderer;
- try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:kind==='study'});}catch(error){$('#loading').hidden=true;$('#error').hidden=false;throw error;}
- renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setPixelRatio(Math.min(devicePixelRatio,kind==='study'?1.5:2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.localClippingEnabled=true;renderer.toneMapping=THREE.ACESFilmicToneMapping;
- const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(kind==='study'?36:38,1,.01,200),studio=createStudioRig(scene,renderer,kind==='study'?{subject:[0,0,0],distance:7,environmentIntensity:.42,key:{color:'#fff0dd',intensity:10,width:5,height:6,elevationDeg:45,azimuthDeg:325},fill:{color:'#a4cadb',intensity:5,width:5,height:5,elevationDeg:12,azimuthDeg:65},rim:{color:'#d7f0f0',intensity:12,width:2,height:5,elevationDeg:35,azimuthDeg:165},contact:{color:'#d2e8ea',intensity:1.2,mapSize:1024,bias:-.0001,normalBias:.035,extent:8}}:{subject:[0,.14,0],distance:1.4});
- if(kind==='study')scene.add(new THREE.HemisphereLight('#bfd3e0','#25313b',.55));
- let background=gradientSky(kind==='study'?'#14242c':'#0d0f12',kind==='study'?'#243b43':'#1c2026');scene.background=background;
- const stage=[];if(kind==='study'){const base=new THREE.Mesh(new THREE.CylinderGeometry(3.65,3.8,.12,100),new THREE.MeshStandardMaterial({color:'#142329',roughness:.65,metalness:.25})),rim=new THREE.Mesh(new THREE.TorusGeometry(3.68,.009,6,160),new THREE.MeshStandardMaterial({color:'#7e9697',roughness:.3,metalness:.65}));base.position.y=-2.59;base.receiveShadow=true;rim.position.y=-2.52;rim.rotation.x=Math.PI/2;scene.add(base,rim);stage.push(base,rim);}
- let bootstrapDisposed=false;const disposeBootstrap=()=>{if(bootstrapDisposed)return;bootstrapDisposed=true;studio.dispose();for(const object of stage){object.geometry.dispose();object.material.dispose();}background?.dispose();renderer.dispose();};
- let model,nightRig,loop,paused=matchMedia('(prefers-reduced-motion: reduce)').matches;
- const invalidate=()=>loop?.invalidate();
- try{model=await createScene();scene.add(model.group);setCopy(nightName?{...meta,description:NIGHT_VIEWS[nightName].description}:meta,model);
-  if(kind==='study'){stage.forEach(object=>object.visible=model.stage!==false);const light=model.lighting||{};renderer.toneMappingExposure=light.exposure??1.05;scene.environmentIntensity=light.environment??.42;studio.contact.intensity=light.contact??1.2;studio.key.color.set(light.keyColor??'#fff0dd');studio.fill.color.set(light.fillColor??'#a4cadb');studio.key.intensity=light.key??10;studio.fill.intensity=light.fill??5;studio.rim.intensity=light.rim??12;studio.rim.color.set(meta.accent||'#78b9b2');addStudyControls(model,invalidate);}
-  else{renderer.toneMappingExposure=look==='studio'?1:.72;scene.environmentIntensity=look==='studio'?.15:.2;for(const name of ['key','fill','rim'])studio[name].intensity=studio.settings[name].intensity*(look==='studio'?1:.6);if(model.bind)model.bind($('#subject-controls'),invalidate);if(nightName){nightRig=createNightLighting(scene,renderer,studio);nightRig.activate(nightName,model);nightRig.bind($('#subject-controls'),invalidate);paused=true;}}
- }catch(error){console.error(error);$('#error').hidden=false;$('#error').textContent=`This study could not load. ${error.message}`;$('#loading').hidden=true;disposeBootstrap();return;}
- const sourceViews=views||model.views||{overview:{position:[.52,.34,.67],target:[0,.17,0]},detail:{position:[.34,.24,.46],target:[0,.17,0]}};
- const rig=createCameraRig({camera,canvas,views:sourceViews,invalidate,limits:kind==='study'?{minPolarDeg:5,maxPolarDeg:155,minDist:1,maxDist:35}:{minPolarDeg:8,maxPolarDeg:88,minDist:.08,maxDist:9}});
- const viewer=installViewer({camera,controls:rig.controls,views:sourceViews,setView:rig.setView,invalidate});
- const pause=$('#pause'),reset=$('#reset');function syncPause(){pause.textContent=paused?'Play motion':'Pause motion';pause.setAttribute('aria-pressed',String(paused));}syncPause();pause.onclick=()=>{paused=!paused;syncPause();invalidate();};
- reset.textContent=model.reset?'Reset study':'Reset view';$('#overview').onclick=()=>rig.setView('overview');$('#detail').onclick=()=>rig.setView('detail');reset.onclick=()=>{model.reset?.();model.update?.(0);syncAll(model);rig.reset();invalidate();};
- let syncElapsed=0;loop=createRenderLoop({fps:45,draw(dt){let moving=false;try{moving=model.update?.(paused?0:dt)??false;syncElapsed+=dt;if(syncElapsed>.16){syncAll(model);syncElapsed=0;}}catch(error){paused=true;syncPause();console.error(error);$('#error').hidden=false;$('#error').textContent='The model stopped after an error.';}const cameraChanged=rig.update(dt);renderer.render(scene,camera);viewer.markReady();return moving||cameraChanged||(!paused&&(model.needsAnimation?.()??false));}});
- new ResizeObserver(()=>{const{width,height}=viewport.getBoundingClientRect();if(!width||!height)return;renderer.setSize(width,height,false);camera.aspect=width/height;camera.zoom=Math.min(1,camera.aspect/1.35);camera.updateProjectionMatrix();invalidate();}).observe(viewport);
- let disposed=false;const cleanup=()=>{if(disposed)return;disposed=true;loop.dispose();rig.dispose();nightRig?.dispose();model.dispose?.();disposeGroup(model.group);disposeBootstrap();};
- document.addEventListener('visibilitychange',()=>loop.setActive(!document.hidden));addEventListener('pagehide',event=>{if(event.persisted){loop.setActive(false);return;}cleanup();});addEventListener('pageshow',event=>{if(event.persisted&&!disposed){loop.setActive(!document.hidden);invalidate();}});
- rig.reset();$('#loading').hidden=true;viewport.setAttribute('aria-busy','false');paintStats(model);loop.setActive(!document.hidden);
+  const nightMeta = nightName ? NIGHT_VIEWS[nightName] : null;
+  const initialTitle = nightMeta?.title || meta.title || 'Interactive study';
+  const initialDescription = nightMeta?.description || meta.description || '';
+
+  document.title = initialTitle;
+  setText('kicker', meta.kicker || '');
+  setText('title', initialTitle);
+  setText('description', initialDescription);
+
+  const viewport = document.getElementById('viewport');
+  const canvas = document.getElementById('world');
+  const loadingEl = document.getElementById('loading');
+  const errorEl = document.getElementById('error');
+
+  function showError(message) {
+    if (loadingEl) loadingEl.hidden = true;
+    if (viewport) viewport.setAttribute('aria-busy', 'false');
+    if (errorEl) {
+      if (message) errorEl.textContent = message;
+      errorEl.hidden = false;
+    }
+  }
+
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      powerPreference: 'high-performance',
+    });
+  } catch {
+    showError('This scene needs WebGL. Enable hardware acceleration and reload.');
+    return;
+  }
+
+  const lookCfg = look ? LOOKS[look] : null;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.localClippingEnabled = true;
+
+  const scene = new THREE.Scene();
+  let bgTexture = null;
+  if (lookCfg?.background) {
+    if (lookCfg.background.model === 'gradient') {
+      bgTexture = createBackgroundTexture(lookCfg.background.zenith, lookCfg.background.horizon);
+      scene.background = bgTexture;
+    } else {
+      scene.background = new THREE.Color(lookCfg.background.zenith);
+    }
+  } else {
+    bgTexture = createBackgroundTexture('#0a1217', '#132229');
+    scene.background = bgTexture;
+  }
+
+  let result;
+  try {
+    result = await createScene();
+  } catch (err) {
+    console.error(err);
+    bgTexture?.dispose();
+    renderer.dispose();
+    showError(err?.message ? `Unable to load study: ${err.message}` : 'Unable to initialize this 3D study.');
+    return;
+  }
+
+  const resolvedTitle = meta.title || result.title || initialTitle;
+  const resolvedDescription = meta.description || nightMeta?.description || result.description || '';
+  document.title = resolvedTitle;
+  setText('title', resolvedTitle);
+  setText('description', resolvedDescription);
+
+  scene.add(result.group);
+
+  const toneMode = lookCfg?.toneMapping?.mode;
+  renderer.toneMapping =
+    toneMode === 'Neutral' ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure =
+    result.lighting?.exposure ?? lookCfg?.toneMapping?.exposure ?? 1.0;
+
+  let studio = null;
+  let nightRig = null;
+
+  if (!lookCfg || lookCfg.lit !== false) {
+    const lightCfg = result.lighting || {};
+    const studioOptions = {
+      subject: kind === 'breadth' ? [0, 0.14, 0] : [0, 0, 0],
+      environmentIntensity:
+        lightCfg.environment ?? lookCfg?.environmentIntensity ?? 0.25,
+    };
+    studio = createStudioRig(scene, renderer, studioOptions);
+    if (typeof lightCfg.key === 'number') studio.key.intensity = lightCfg.key;
+    if (typeof lightCfg.fill === 'number') studio.fill.intensity = lightCfg.fill;
+    if (typeof lightCfg.rim === 'number') studio.rim.intensity = lightCfg.rim;
+    if (typeof lightCfg.contact === 'number') studio.contact.intensity = lightCfg.contact;
+    if (lightCfg.keyColor) studio.key.color.set(lightCfg.keyColor);
+    if (lightCfg.fillColor) studio.fill.color.set(lightCfg.fillColor);
+
+    if (nightName) {
+      nightRig = createNightLighting(scene, renderer, studio);
+      nightRig.activate(nightName, result);
+    }
+  }
+
+  const defaultViews = {
+    overview: { position: [4, 2.3, 8], target: [0, 0, 0] },
+    detail: { position: [2, 1, 4.6], target: [0, 0, 0] },
+  };
+  const mergedViews = {
+    overview: customViews?.overview || result.views?.overview || defaultViews.overview,
+    detail: customViews?.detail || result.views?.detail || defaultViews.detail,
+  };
+
+  const width = viewport?.clientWidth || window.innerWidth || 1280;
+  const height = viewport?.clientHeight || window.innerHeight || 720;
+  const fov = lookCfg?.camera?.fovDeg ?? 36;
+  const camera = new THREE.PerspectiveCamera(fov, width / Math.max(1, height), 0.01, 150);
+  renderer.setSize(width, height, false);
+
+  const limits =
+    kind === 'breadth'
+      ? { minPolarDeg: 5, maxPolarDeg: 175, minDist: 0.06, maxDist: 4.5 }
+      : { minPolarDeg: 5, maxPolarDeg: 175, minDist: 0.8, maxDist: 35 };
+
+  let loop;
+  const invalidate = () => loop?.invalidate();
+
+  const rig = createCameraRig({
+    camera,
+    canvas,
+    limits,
+    views: mergedViews,
+    invalidate,
+  });
+  rig.setView('overview');
+
+  const readoutsEl = document.getElementById('readouts');
+  let readoutNodes = [];
+  let lastReadoutKey = '';
+
+  function updateReadouts() {
+    if (!readoutsEl || typeof result.stats !== 'function') return;
+    const stats = result.stats() || [];
+    if (stats.length !== readoutNodes.length) {
+      readoutsEl.textContent = '';
+      readoutNodes = stats.map((item) => {
+        const card = document.createElement('div');
+        card.className = 'readout-card';
+        const dt = document.createElement('span');
+        dt.className = 'readout-label';
+        dt.textContent = item.label;
+        const dd = document.createElement('strong');
+        dd.className = 'readout-value';
+        dd.textContent = String(item.value);
+        card.append(dt, dd);
+        readoutsEl.append(card);
+        return { dt, dd };
+      });
+      lastReadoutKey = stats.map((s) => `${s.label}:${s.value}`).join('|');
+      return;
+    }
+    const nextKey = stats.map((s) => `${s.label}:${s.value}`).join('|');
+    if (nextKey === lastReadoutKey) return;
+    lastReadoutKey = nextKey;
+    stats.forEach((item, i) => {
+      readoutNodes[i].dt.textContent = item.label;
+      readoutNodes[i].dd.textContent = String(item.value);
+    });
+  }
+
+  const controlsHost = document.getElementById('subject-controls');
+  const controlSyncers = [];
+
+  if (controlsHost && Array.isArray(result.controls)) {
+    for (const ctrl of result.controls) {
+      if (ctrl.type === 'range') {
+        const label = document.createElement('label');
+        const row = document.createElement('span');
+        row.className = 'control-header';
+        const title = document.createElement('span');
+        title.textContent = ctrl.label;
+        const output = document.createElement('output');
+        row.append(title, output);
+
+        const input = document.createElement('input');
+        input.type = 'range';
+        input.id = ctrl.id;
+        input.min = String(ctrl.min);
+        input.max = String(ctrl.max);
+        input.step = String(ctrl.step);
+        input.setAttribute('aria-label', ctrl.label);
+
+        const sync = () => {
+          const val = ctrl.get();
+          input.value = String(val);
+          output.textContent = formatRangeValue(val, ctrl.step);
+        };
+        input.oninput = () => {
+          ctrl.set(Number(input.value));
+          result.update?.(0);
+          syncAllControls();
+          updateReadouts();
+          invalidate();
+        };
+        label.append(row, input);
+        controlsHost.append(label);
+        controlSyncers.push(sync);
+      } else if (ctrl.type === 'select') {
+        const label = document.createElement('label');
+        const title = document.createElement('span');
+        title.textContent = ctrl.label;
+        const select = document.createElement('select');
+        select.id = ctrl.id;
+        select.setAttribute('aria-label', ctrl.label);
+        for (const opt of ctrl.options || []) {
+          const option = document.createElement('option');
+          option.value = opt.value;
+          option.textContent = opt.label;
+          select.append(option);
+        }
+        const sync = () => {
+          select.value = ctrl.get();
+        };
+        select.onchange = () => {
+          ctrl.set(select.value);
+          result.update?.(0);
+          syncAllControls();
+          updateReadouts();
+          invalidate();
+        };
+        label.append(title, select);
+        controlsHost.append(label);
+        controlSyncers.push(sync);
+      } else if (ctrl.type === 'button') {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.id = ctrl.id;
+        const sync = () => {
+          button.textContent = typeof ctrl.getLabel === 'function' ? ctrl.getLabel() : ctrl.label;
+        };
+        button.onclick = () => {
+          ctrl.set();
+          result.update?.(0);
+          syncAllControls();
+          updateReadouts();
+          invalidate();
+        };
+        controlsHost.append(button);
+        controlSyncers.push(sync);
+      }
+    }
+  }
+
+  function syncAllControls() {
+    for (const sync of controlSyncers) sync();
+    result.sync?.();
+  }
+
+  if (controlsHost && typeof result.bind === 'function') {
+    result.bind(controlsHost, invalidate);
+  }
+  if (controlsHost && nightRig) {
+    nightRig.bind(controlsHost, invalidate);
+  }
+
+  const aboutEl = document.getElementById('about');
+  const modelNoteEl = document.getElementById('model-note');
+  const sourcesEl = document.getElementById('sources');
+  const craftNoteEl = document.getElementById('craft-note');
+
+  const noteText = result.note || '';
+  const craftText = result.craft || '';
+  const sourcesList = Array.isArray(result.sources) ? result.sources : [];
+
+  if (modelNoteEl) {
+    modelNoteEl.textContent = noteText;
+    modelNoteEl.hidden = !noteText;
+  }
+  if (craftNoteEl) {
+    craftNoteEl.textContent = craftText;
+    craftNoteEl.hidden = !craftText;
+  }
+  if (sourcesEl) {
+    sourcesEl.textContent = '';
+    for (const src of sourcesList) {
+      const a = document.createElement('a');
+      a.href = src.url;
+      a.textContent = src.title;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      sourcesEl.append(a);
+    }
+    sourcesEl.hidden = sourcesList.length === 0;
+  }
+  if (aboutEl && !noteText && !craftText && sourcesList.length === 0) {
+    aboutEl.hidden = true;
+  }
+
+  const prefersReducedMotion =
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let paused = prefersReducedMotion;
+
+  const pauseBtn = document.getElementById('pause');
+  const overviewBtn = document.getElementById('overview');
+  const detailBtn = document.getElementById('detail');
+  const resetBtn = document.getElementById('reset');
+
+  function syncPauseButton() {
+    if (!pauseBtn) return;
+    pauseBtn.setAttribute('aria-pressed', String(paused));
+    pauseBtn.textContent = paused ? 'Resume motion' : 'Pause motion';
+  }
+  syncPauseButton();
+
+  if (overviewBtn) {
+    overviewBtn.onclick = () => {
+      rig.setView('overview');
+      invalidate();
+    };
+  }
+  if (detailBtn) {
+    detailBtn.onclick = () => {
+      rig.setView('detail');
+      invalidate();
+    };
+  }
+  if (pauseBtn) {
+    pauseBtn.onclick = () => {
+      paused = !paused;
+      syncPauseButton();
+      invalidate();
+    };
+  }
+  if (resetBtn) {
+    resetBtn.onclick = () => {
+      result.reset?.();
+      rig.reset();
+      syncAllControls();
+      updateReadouts();
+      invalidate();
+    };
+  }
+
+  syncAllControls();
+  updateReadouts();
+
+  loop = createRenderLoop({
+    draw(dt) {
+      const effDt = paused ? 0 : dt;
+      const sceneMoved = result.update ? Boolean(result.update(effDt)) : false;
+      const needsAnim =
+        !paused && (result.needsAnimation ? Boolean(result.needsAnimation()) : sceneMoved);
+      const camMoving = rig.update(dt);
+      if (!paused && (sceneMoved || needsAnim)) {
+        syncAllControls();
+        updateReadouts();
+      }
+      renderer.render(scene, camera);
+      return needsAnim || camMoving;
+    },
+  });
+
+  function onResize() {
+    const w = viewport?.clientWidth || window.innerWidth || 1280;
+    const h = viewport?.clientHeight || window.innerHeight || 720;
+    camera.aspect = w / Math.max(1, h);
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h, false);
+    invalidate();
+  }
+
+  let resizeObserver = null;
+  if (typeof ResizeObserver !== 'undefined' && viewport) {
+    resizeObserver = new ResizeObserver(onResize);
+    resizeObserver.observe(viewport);
+  } else {
+    window.addEventListener('resize', onResize);
+  }
+
+  if (loadingEl) loadingEl.hidden = true;
+  if (viewport) viewport.setAttribute('aria-busy', 'false');
+  invalidate();
+
+  const cleanup = () => {
+    loop?.dispose();
+    resizeObserver?.disconnect();
+    window.removeEventListener('resize', onResize);
+    rig.dispose();
+    nightRig?.dispose();
+    studio?.dispose();
+    result.dispose?.();
+    bgTexture?.dispose();
+    renderer.dispose();
+  };
+  window.addEventListener('pagehide', cleanup, { once: true });
 }

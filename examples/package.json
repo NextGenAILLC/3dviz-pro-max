@@ -4,10 +4,11 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1 --port 4180",
+    "dev": "vite --host 0.0.0.0 --port 3000",
     "fetch-assets": "bash scripts/fetch-assets.sh",
     "build": "vite build",
-    "preview": "vite preview --host 127.0.0.1 --port 4180",
+    "preview": "vite preview --host 0.0.0.0 --port 3000",
+    "lint": "node --check shared/standalone-runtime.js && node --check landing/heart-intro.js && node --check landing/main.js && node --test --test-concurrency=1 shared/*.test.js shared/art-science/scenes/*.test.js shared/breadth/src/*.test.js",
     "test": "node --test --test-concurrency=1 shared/*.test.js shared/art-science/scenes/*.test.js shared/breadth/src/*.test.js"
   },
   "dependencies": {
@@ -15,6 +16,5 @@
   },
   "devDependencies": {
     "vite": "7.1.5"
-  },
-  "packageManager": "pnpm@10.30.1"
+  }
 }

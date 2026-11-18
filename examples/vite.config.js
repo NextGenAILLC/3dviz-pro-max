@@ -1,17 +1,49 @@
-import { readdirSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
+import { existsSync, readdirSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root=import.meta.dirname;
-const excluded=new Set(['art-science-lab','dist','early-slice','node_modules','public','scripts','shared']);
-const pages=Object.fromEntries(readdirSync(root,{withFileTypes:true})
- .filter(entry=>entry.isDirectory()&&!entry.name.startsWith('.')&&!excluded.has(entry.name))
- .map(entry=>[entry.name,resolve(root,entry.name,'index.html')]));
+const rootDir = path.dirname(fileURLToPath(import.meta.url));
+const skipDirs = new Set(['shared', 'node_modules', 'public', 'dist', 'scripts']);
+
+function collectHtmlInputs() {
+  const inputs = {
+    main: path.join(rootDir, 'index.html'),
+  };
+  for (const entry of readdirSync(rootDir, { withFileTypes: true })) {
+    if (!entry.isDirectory() || skipDirs.has(entry.name)) continue;
+    const htmlPath = path.join(rootDir, entry.name, 'index.html');
+    if (existsSync(htmlPath)) {
+      inputs[entry.name] = htmlPath;
+    }
+  }
+  return inputs;
+}
+
+const assetProxy = {
+  '/assets': {
+    target: 'https://assets.3dviz.dev',
+    changeOrigin: true,
+    rewrite: (reqPath) => reqPath.replace(/^\/assets/, ''),
+  },
+};
 
 export default defineConfig({
- base:'./',
- // With a hosted VITE_ASSET_BASE the studies never request /assets/, so the 169 MB of STL
- // under public/ must not be copied into the build (that is the whole point of hosting it).
- publicDir:process.env.VITE_ASSET_BASE?false:'public',
- build:{rollupOptions:{input:{index:resolve(root,'index.html'),...pages}}}
+  server: {
+    host: '0.0.0.0',
+    port: 3000,
+    allowedHosts: true,
+    proxy: assetProxy,
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 3000,
+    allowedHosts: true,
+    proxy: assetProxy,
+  },
+  build: {
+    rollupOptions: {
+      input: collectHtmlInputs(),
+    },
+  },
 });

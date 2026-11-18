@@ -1,0 +1,15 @@
+{
+  "name": "3dviz-pro-max",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "examples"
+  ],
+  "scripts": {
+    "dev": "npm --prefix examples run dev",
+    "build": "npm --prefix examples run build",
+    "preview": "npm --prefix examples run preview",
+    "test": "npm --prefix examples run test",
+    "lint": "npm --prefix examples run lint"
+  }
+}

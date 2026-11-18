@@ -1,4 +1,345 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Interactive 3D study</title><meta http-equiv="refresh" content="0;url=./heart/"></head>
-<body><p><a href="./heart/">Open The Living Heart</a></p></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>3Dviz Pro Max — Interactive 3D Studies &amp; Visualization Skill</title>
+  <meta name="description" content="Turn an idea into a 3D scene worth exploring. 37 runnable Three.js studies, 223 recipes, 440 knowledge records, and 22 blueprint kits.">
+  <meta property="og:title" content="3Dviz Pro Max — Interactive 3D Studies &amp; Visualization Skill">
+  <meta property="og:description" content="Turn an idea into a 3D scene worth exploring. 37 runnable Three.js studies across anatomy, mathematics, physics, crafted worlds, and lighting.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="./landing/landing.css">
+  <noscript><style>.heart-intro{display:none!important}</style></noscript>
+</head>
+<body class="intro-locked">
+  <!-- Beating Heart Intro Component: displays briefly, dissolves into landing page -->
+  <div id="heart-intro" class="heart-intro" role="dialog" aria-modal="true" aria-label="The Living Heart — intro"></div>
+
+  <div class="site-shell" id="site-shell">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="#top" class="brand-link" aria-label="3Dviz Pro Max home">
+          <svg viewBox="0 0 48 48" width="28" height="28" role="img" aria-hidden="true">
+            <g fill="none" stroke="#0b7553" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
+              <path d="M24 5 41 14.5v19L24 43 7 33.5v-19Z"/>
+              <path d="M7 14.5 24 24l17-9.5M24 24v19"/>
+            </g>
+            <circle cx="24" cy="24" r="3.2" fill="#c7ef7a" stroke="#0b7553" stroke-width="1.6"/>
+          </svg>
+          <span class="brand-name">3Dviz Pro Max</span>
+        </a>
+
+        <nav class="site-nav" aria-label="Primary">
+          <a href="#studies">Studies</a>
+          <a href="#showcase">Showcase</a>
+          <a href="#workflow">Workflow</a>
+          <a href="#directions">Directions</a>
+        </nav>
+
+        <a href="./heart/" class="btn btn-primary btn-compact">Open Heart Study</a>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero-section" aria-labelledby="hero-heading">
+        <div class="container">
+          <div class="hero-grid">
+            <div class="hero-copy">
+              <p class="section-kicker">Standalone 3D Visualization Skill · Three.js 0.180</p>
+              <h1 class="hero-title" id="hero-heading">Turn an idea into a 3D scene worth exploring.</h1>
+              <p class="hero-lead">
+                Shape the world, model its rules, make it interactive, and verify every frame on screen. Explore 37 runnable Three.js studies across anatomy, mathematics, physics, crafted worlds, and lighting.
+              </p>
+              <div class="hero-actions">
+                <a href="#studies" class="btn btn-primary">Explore 37 Studies</a>
+                <button type="button" class="btn btn-secondary" data-replay-heart>Replay Heart Intro</button>
+                <a href="./heart/" class="hero-text-link">Open The Living Heart &rarr;</a>
+              </div>
+            </div>
+
+            <div class="hero-media">
+              <img
+                src="/showcase/village-overcast-morning.jpg"
+                alt="Copperleaf Hollow stone bridge and timber cottages rendered under soft overcast daylight"
+                referrerpolicy="no-referrer"
+              >
+              <div class="hero-media-bar">
+                <span class="hero-media-meta">Copperleaf Hollow · Overcast Morning Look</span>
+                <a href="./village/" class="hero-media-link">Open scene &rarr;</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="proof-strip">
+          <div class="container">
+            <div class="proof-grid">
+              <div class="proof-item">
+                <span class="proof-value">37</span>
+                <span class="proof-label">Interactive Studies</span>
+                <span class="proof-note">5 chapters, directly runnable</span>
+              </div>
+              <div class="proof-item">
+                <span class="proof-value">223</span>
+                <span class="proof-label">Authored Recipes</span>
+                <span class="proof-note">24 directions, min 6 each</span>
+              </div>
+              <div class="proof-item">
+                <span class="proof-value">440</span>
+                <span class="proof-label">Knowledge Records</span>
+                <span class="proof-note">18 families, 69 with defaults</span>
+              </div>
+              <div class="proof-item">
+                <span class="proof-value">22</span>
+                <span class="proof-label">Blueprint Kits</span>
+                <span class="proof-note">Verified modular Three.js builds</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="studies" aria-labelledby="studies-heading">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Interactive Catalog</p>
+              <h2 class="section-title" id="studies-heading">37 Runnable 3D Studies</h2>
+            </div>
+            <p class="section-subtitle">
+              Filter by chapter or preview any study directly in an interactive Three.js viewport. Every study includes overview and detail views, orbit controls, and subject parameters.
+            </p>
+          </div>
+
+          <div class="study-toolbar">
+            <div class="chapter-tabs" id="chapter-tabs" role="group" aria-label="Filter studies by chapter"></div>
+            <input
+              type="search"
+              id="study-search"
+              class="study-search"
+              placeholder="Filter by title, subject, or ID…"
+              aria-label="Filter studies"
+            >
+          </div>
+
+          <div class="studies-grid" id="studies-grid"></div>
+        </div>
+      </section>
+
+      <section class="band band-tinted" id="showcase" aria-labelledby="showcase-heading">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Observed Captures</p>
+              <h2 class="section-title" id="showcase-heading">Runtime Showcase Gallery</h2>
+            </div>
+            <p class="section-subtitle">
+              Headless Chromium GPU captures rendered directly from the skill’s blueprint kits, studio rigs, and named lighting looks.
+            </p>
+          </div>
+
+          <div class="bento-grid">
+            <a href="./village/" class="bento-card bento-card--wide">
+              <div class="bento-media">
+                <img src="/showcase/village-dusk-golden-hour.jpg" alt="Copperleaf Hollow island diorama at dusk golden hour" loading="lazy" referrerpolicy="no-referrer">
+              </div>
+              <div class="bento-body">
+                <span class="bento-meta">Crafted World · Dusk Golden Hour</span>
+                <h3 class="bento-title">Copperleaf Hollow Island</h3>
+                <p class="bento-caption">Inn, round tower, long hall, stone bridge, and pond composed under a warm horizon key with instanced conifers and rock skirt.</p>
+              </div>
+            </a>
+
+            <a href="./cottage/" class="bento-card">
+              <div class="bento-media">
+                <img src="/showcase/timber-cottage-t3-closeup.jpg" alt="Timber cottage close-up showing sill drips, peg heads, and timber framing" loading="lazy" referrerpolicy="no-referrer">
+              </div>
+              <div class="bento-body">
+                <span class="bento-meta">Blueprint Kit · Hero Detail</span>
+                <h3 class="bento-title">Timber Cottage Close-up</h3>
+                <p class="bento-caption">Framed close enough to read sill drips, recessed window frames, and timber peg heads.</p>
+              </div>
+            </a>
+
+            <a href="./gears/" class="bento-card">
+              <div class="bento-media">
+                <img src="/showcase/coupled-gears-studio.jpg" alt="Steel and brass 24 to 16 tooth coupled spur gears in dark studio lighting" loading="lazy" referrerpolicy="no-referrer">
+              </div>
+              <div class="bento-body">
+                <span class="bento-meta">Mechanism · Three-Panel Studio</span>
+                <h3 class="bento-title">Coupled Spur Gears (3:2)</h3>
+                <p class="bento-caption">24/16-tooth steel and brass pair lit by softbox RectAreaLights in a dark studio rig.</p>
+              </div>
+            </a>
+
+            <a href="./night-river/" class="bento-card">
+              <div class="bento-media">
+                <img src="/showcase/village-night-lantern-river.jpg" alt="Riverside village at night illuminated by warm lantern pools" loading="lazy" referrerpolicy="no-referrer">
+              </div>
+              <div class="bento-body">
+                <span class="bento-meta">Lighting Study · Practical Night</span>
+                <h3 class="bento-title">Lanterns by the River</h3>
+                <p class="bento-caption">Practical lanterns act as the primary key light, carving warm pools out of cool twilight.</p>
+              </div>
+            </a>
+
+            <a href="./night-bridge/" class="bento-card">
+              <div class="bento-media">
+                <img src="/showcase/stone-bridge-over-water.jpg" alt="Arched stone bridge crossing running river water" loading="lazy" referrerpolicy="no-referrer">
+              </div>
+              <div class="bento-body">
+                <span class="bento-meta">Architecture · Water Surface</span>
+                <h3 class="bento-title">Stone Bridge &amp; Stream</h3>
+                <p class="bento-caption">Dressed bridge arches and stepped approaches anchored over the animated river plane.</p>
+              </div>
+            </a>
+
+            <a href="./bloch/" class="bento-card bento-card--wide">
+              <div class="bento-media">
+                <img src="/showcase/bloch-ball-linear-algebra.jpg" alt="Single-qubit Bloch sphere technical illustration" loading="lazy" referrerpolicy="no-referrer">
+              </div>
+              <div class="bento-body">
+                <span class="bento-meta">Mathematics · Technical Illustration</span>
+                <h3 class="bento-title">Single-Qubit Bloch Compass</h3>
+                <p class="bento-caption">Pure-state vector at polar 55 deg and azimuth 35 deg — crisp unlit diagram fills on a bright stage.</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="workflow" aria-labelledby="workflow-heading">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Ten-Step Skill Method</p>
+              <h2 class="section-title" id="workflow-heading">How One Sentence Becomes a Scene</h2>
+            </div>
+            <p class="section-subtitle">
+              Creative direction comes before templates: proportions, grounded physics or anatomy sources, interactive controls, and observed frame inspection.
+            </p>
+          </div>
+
+          <div class="workflow-grid">
+            <article class="workflow-step">
+              <span class="workflow-num">01</span>
+              <h3>Intent &amp; Visual Direction</h3>
+              <p>Establish silhouette, lighting mood, camera framing, and palette before writing geometry code.</p>
+            </article>
+            <article class="workflow-step">
+              <span class="workflow-num">02</span>
+              <h3>Object Reasoning &amp; Routing</h3>
+              <p>Decompose parts, joints, and scales; route between proved blueprint kits, procedural rigs, or registered meshes.</p>
+            </article>
+            <article class="workflow-step">
+              <span class="workflow-num">03</span>
+              <h3>Build &amp; Grounded Behavior</h3>
+              <p>Bind motion and cutaways to real underlying state while stating scope, sources, and honest limits.</p>
+            </article>
+            <article class="workflow-step">
+              <span class="workflow-num">04</span>
+              <h3>Run, Capture &amp; Refine</h3>
+              <p>Inspect rendered viewpoints and interactions directly in WebGL, refining lighting and geometry from observed frames.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="band band-tinted" id="directions" aria-labelledby="directions-heading">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Domain Coverage</p>
+              <h2 class="section-title" id="directions-heading">24 Registered Directions</h2>
+            </div>
+            <p class="section-subtitle">
+              223 recipes spanning worlds, science, engineering, and abstract systems — each backed by reusable defaults and verification rules.
+            </p>
+          </div>
+
+          <div class="directions-grid">
+            <div class="direction-group">
+              <h3>Worlds &amp; Craft</h3>
+              <ul class="direction-list">
+                <li>Environments &amp; Islands</li>
+                <li>Characters &amp; Motion Art</li>
+                <li>Architecture &amp; Interiors</li>
+                <li>Products &amp; Assemblies</li>
+                <li>Operations &amp; Logistics</li>
+                <li>Earth &amp; Environment</li>
+              </ul>
+            </div>
+            <div class="direction-group">
+              <h3>Anatomy &amp; Science</h3>
+              <ul class="direction-list">
+                <li>Registered Anatomy</li>
+                <li>Physiology &amp; Biomechanics</li>
+                <li>Molecules &amp; Materials</li>
+                <li>Waves, Optics &amp; Fields</li>
+                <li>Soft, Fluid &amp; Thermal</li>
+                <li>Astronomy &amp; Space</li>
+              </ul>
+            </div>
+            <div class="direction-group">
+              <h3>Math &amp; Logic</h3>
+              <ul class="direction-list">
+                <li>Linear Algebra</li>
+                <li>Calculus &amp; Vector Fields</li>
+                <li>Solid Geometry</li>
+                <li>Topology &amp; Symmetry</li>
+                <li>Probability &amp; Statistics</li>
+                <li>Logic &amp; Circuits</li>
+              </ul>
+            </div>
+            <div class="direction-group">
+              <h3>Mechanics &amp; Systems</h3>
+              <ul class="direction-list">
+                <li>Rigid Mechanics</li>
+                <li>Robotics &amp; Control</li>
+                <li>Algorithms &amp; Structures</li>
+                <li>Twisty Puzzles</li>
+                <li>Spatial Puzzles</li>
+                <li>Abstract Systems</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-inner">
+          <div>
+            <strong class="brand-name">3Dviz Pro Max</strong>
+            <p class="footer-meta">
+              Repository code, data, and authored scenes are MIT licensed. Anatomy STL meshes are from BodyParts3D (&copy; The Database Center for Life Science, CC BY-SA 2.1 Japan via the Kevin Moerman STL mirror).
+            </p>
+          </div>
+          <div class="footer-links">
+            <button type="button" class="btn btn-secondary btn-compact" data-replay-heart>Replay Heart Intro</button>
+            <a href="./heart/" class="btn btn-primary btn-compact">Open The Living Heart</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Interactive Study Preview Modal -->
+  <dialog id="study-dialog" class="study-dialog" aria-labelledby="study-dialog-title">
+    <div class="study-dialog-head">
+      <h2 id="study-dialog-title" class="study-dialog-title">Interactive Study</h2>
+      <div class="study-dialog-actions">
+        <a id="study-dialog-link" href="./heart/" class="study-dialog-link">Open standalone page &rarr;</a>
+        <button type="button" id="study-dialog-close" class="study-dialog-close">Close</button>
+      </div>
+    </div>
+    <iframe id="study-dialog-frame" class="study-dialog-frame" title="Interactive 3D study preview" src="about:blank"></iframe>
+  </dialog>
+
+  <script type="module" src="./landing/main.js"></script>
+</body>
+</html>
