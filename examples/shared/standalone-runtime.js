@@ -44,8 +44,11 @@ export async function mountScene({
   applyEmbed(document, window.location.search);
 
   if (meta.accent) {
-    document.documentElement.style.setProperty('--accent', meta.accent);
+    document.documentElement.style.setProperty('--study-accent', meta.accent);
   }
+
+  const isPlate = document.documentElement.dataset.plate === '1';
+  const isEmbed = document.documentElement.dataset.embed === '1';
 
   const nightMeta = nightName ? NIGHT_VIEWS[nightName] : null;
   const initialTitle = nightMeta?.title || meta.title || 'Interactive study';
@@ -55,6 +58,24 @@ export async function mountScene({
   setText('kicker', meta.kicker || '');
   setText('title', initialTitle);
   setText('description', initialDescription);
+
+  const headingEl = document.querySelector('.heading');
+  const panelEl = document.querySelector('.panel');
+  const panelSummary = panelEl?.querySelector(':scope > summary');
+  const panelContentEl = panelEl?.querySelector('.panel-content');
+  if (panelSummary) {
+    panelSummary.textContent = 'System parameters';
+  }
+  if (headingEl && !isPlate && !isEmbed && !headingEl.querySelector('.back-home-link')) {
+    const backLink = document.createElement('a');
+    backLink.className = 'back-home-link';
+    backLink.href = '../?skipIntro=1';
+    backLink.textContent = '← 3Dviz Pro Max';
+    headingEl.prepend(backLink);
+  }
+  if (panelEl && !isPlate && !isEmbed && window.matchMedia('(min-width: 1081px)').matches) {
+    panelEl.open = true;
+  }
 
   const viewport = document.getElementById('viewport');
   const canvas = document.getElementById('world');
@@ -70,11 +91,14 @@ export async function mountScene({
     }
   }
 
+  const lookCfg = look ? LOOKS[look] : null;
+
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: true,
+      alpha: !lookCfg?.background,
       powerPreference: 'high-performance',
     });
   } catch {
@@ -82,7 +106,6 @@ export async function mountScene({
     return;
   }
 
-  const lookCfg = look ? LOOKS[look] : null;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.shadowMap.enabled = true;
@@ -99,8 +122,8 @@ export async function mountScene({
       scene.background = new THREE.Color(lookCfg.background.zenith);
     }
   } else {
-    bgTexture = createBackgroundTexture('#0a1217', '#132229');
-    scene.background = bgTexture;
+    scene.background = null;
+    renderer.setClearColor(0x0a0a0c, 0);
   }
 
   let result;
@@ -187,15 +210,27 @@ export async function mountScene({
   const readoutsEl = document.getElementById('readouts');
   let readoutNodes = [];
   let lastReadoutKey = '';
+  const pathParts = window.location.pathname.split('/').filter(Boolean);
+  const studySlug = (pathParts[pathParts.length - 1] || 'study').toUpperCase();
 
   function updateReadouts() {
-    if (!readoutsEl || typeof result.stats !== 'function') return;
-    const stats = result.stats() || [];
+    if (!readoutsEl) return;
+    const rawStats = typeof result.stats === 'function' ? result.stats() || [] : [];
+    const stats = [
+      { label: 'Study ID', value: `3DV-${studySlug}`, accent: true },
+      ...(rawStats.length > 0
+        ? rawStats
+        : [
+            { label: 'Category', value: meta.kicker || '3D Study' },
+            { label: 'Mode', value: kind === 'breadth' ? 'Crafted Scene' : 'Interactive Model' },
+          ]),
+    ];
+
     if (stats.length !== readoutNodes.length) {
       readoutsEl.textContent = '';
       readoutNodes = stats.map((item) => {
         const card = document.createElement('div');
-        card.className = 'readout-card';
+        card.className = item.accent ? 'readout-card readout-card--accent' : 'readout-card';
         const dt = document.createElement('span');
         dt.className = 'readout-label';
         dt.textContent = item.label;
@@ -346,6 +381,23 @@ export async function mountScene({
     aboutEl.hidden = true;
   }
 
+  const desktopMedia = window.matchMedia('(min-width: 1081px)');
+  function syncLayoutSlots() {
+    if (!aboutEl || isPlate || isEmbed) return;
+    if (desktopMedia.matches) {
+      if (headingEl && aboutEl.parentElement !== headingEl) {
+        headingEl.append(aboutEl);
+        aboutEl.open = true;
+      }
+      if (panelEl) panelEl.open = true;
+    } else if (panelContentEl && aboutEl.parentElement !== panelContentEl) {
+      panelContentEl.append(aboutEl);
+      aboutEl.open = false;
+    }
+  }
+  syncLayoutSlots();
+  desktopMedia.addEventListener?.('change', syncLayoutSlots);
+
   const prefersReducedMotion =
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -355,6 +407,12 @@ export async function mountScene({
   const overviewBtn = document.getElementById('overview');
   const detailBtn = document.getElementById('detail');
   const resetBtn = document.getElementById('reset');
+
+  function setActiveViewButton(name) {
+    overviewBtn?.classList.toggle('is-active', name === 'overview');
+    detailBtn?.classList.toggle('is-active', name === 'detail');
+  }
+  setActiveViewButton('overview');
 
   function syncPauseButton() {
     if (!pauseBtn) return;
@@ -366,12 +424,14 @@ export async function mountScene({
   if (overviewBtn) {
     overviewBtn.onclick = () => {
       rig.setView('overview');
+      setActiveViewButton('overview');
       invalidate();
     };
   }
   if (detailBtn) {
     detailBtn.onclick = () => {
       rig.setView('detail');
+      setActiveViewButton('detail');
       invalidate();
     };
   }
@@ -386,6 +446,7 @@ export async function mountScene({
     resetBtn.onclick = () => {
       result.reset?.();
       rig.reset();
+      setActiveViewButton('overview');
       syncAllControls();
       updateReadouts();
       invalidate();
@@ -435,6 +496,7 @@ export async function mountScene({
   const cleanup = () => {
     loop?.dispose();
     resizeObserver?.disconnect();
+    desktopMedia.removeEventListener?.('change', syncLayoutSlots);
     window.removeEventListener('resize', onResize);
     rig.dispose();
     nightRig?.dispose();

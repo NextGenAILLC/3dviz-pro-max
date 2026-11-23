@@ -10,322 +10,337 @@
   <meta property="og:type" content="website">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap">
   <link rel="stylesheet" href="./landing/landing.css">
   <noscript><style>.heart-intro{display:none!important}</style></noscript>
 </head>
 <body class="intro-locked">
-  <!-- Beating Heart Intro Component: displays briefly, dissolves into landing page -->
+  <!-- Beating Heart Intro Component: displays briefly with audio + synced glow, dissolves into landing page -->
   <div id="heart-intro" class="heart-intro" role="dialog" aria-modal="true" aria-label="The Living Heart — intro"></div>
 
   <div class="site-shell" id="site-shell">
-    <header class="site-header">
-      <div class="header-inner">
-        <a href="#top" class="brand-link" aria-label="3Dviz Pro Max home">
-          <svg viewBox="0 0 48 48" width="28" height="28" role="img" aria-hidden="true">
-            <g fill="none" stroke="#0b7553" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
-              <path d="M24 5 41 14.5v19L24 43 7 33.5v-19Z"/>
-              <path d="M7 14.5 24 24l17-9.5M24 24v19"/>
-            </g>
-            <circle cx="24" cy="24" r="3.2" fill="#c7ef7a" stroke="#0b7553" stroke-width="1.6"/>
-          </svg>
-          <span class="brand-name">3Dviz Pro Max</span>
-        </a>
+    <aside class="sidebar" aria-label="Site navigation">
+      <div class="sidebar-top">
+        <div class="brand-area">
+          <span class="label">Three.js 0.180</span>
+          <a href="#top" class="brand-link" aria-label="3Dviz Pro Max home">
+            <svg viewBox="0 0 48 48" width="28" height="28" role="img" aria-hidden="true">
+              <g fill="none" stroke="#92d6bd" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
+                <path d="M24 5 41 14.5v19L24 43 7 33.5v-19Z"/>
+                <path d="M7 14.5 24 24l17-9.5M24 24v19"/>
+              </g>
+              <circle cx="24" cy="24" r="3.2" fill="#c7ef7a" stroke="#92d6bd" stroke-width="1.6"/>
+            </svg>
+            <span class="brand-name">3Dviz<br>Pro Max</span>
+          </a>
+        </div>
 
-        <nav class="site-nav" aria-label="Primary">
-          <a href="#studies">Studies</a>
-          <a href="#showcase">Showcase</a>
-          <a href="#workflow">Workflow</a>
-          <a href="#directions">Directions</a>
+        <nav aria-label="Primary">
+          <ul class="nav-list">
+            <li><a href="#studies" data-nav-link><span>01 Studies</span><kbd class="kbd-hint">1</kbd></a></li>
+            <li><a href="#showcase" data-nav-link><span>02 Showcase</span><kbd class="kbd-hint">2</kbd></a></li>
+            <li><a href="#workflow" data-nav-link><span>03 Workflow</span><kbd class="kbd-hint">3</kbd></a></li>
+            <li><a href="#directions" data-nav-link><span>04 Directions</span><kbd class="kbd-hint">4</kbd></a></li>
+          </ul>
         </nav>
-
-        <a href="./heart/" class="btn btn-primary btn-compact">Open Heart Study</a>
       </div>
-    </header>
 
-    <main id="top">
-      <section class="hero-section" aria-labelledby="hero-heading">
-        <div class="container">
-          <div class="hero-grid">
-            <div class="hero-copy">
-              <p class="section-kicker">Standalone 3D Visualization Skill · Three.js 0.180</p>
-              <h1 class="hero-title" id="hero-heading">Turn an idea into a 3D scene worth exploring.</h1>
-              <p class="hero-lead">
-                Shape the world, model its rules, make it interactive, and verify every frame on screen. Explore 37 runnable Three.js studies across anatomy, mathematics, physics, crafted worlds, and lighting.
-              </p>
-              <div class="hero-actions">
-                <a href="#studies" class="btn btn-primary">Explore 37 Studies</a>
-                <button type="button" class="btn btn-secondary" data-replay-heart>Replay Heart Intro</button>
-                <a href="./heart/" class="hero-text-link">Open The Living Heart &rarr;</a>
-              </div>
-            </div>
+      <div class="sidebar-bottom">
+        <a href="./heart/" class="btn btn-primary btn-block btn-shortcut" id="open-heart-link">
+          <span>Open Heart Study</span>
+          <kbd class="kbd-hint kbd-hint--on-accent">H</kbd>
+        </a>
+        <button type="button" class="btn btn-block btn-shortcut" data-replay-heart>
+          <span>Replay Heart Intro</span>
+          <kbd class="kbd-hint">R</kbd>
+        </button>
+        <button type="button" class="shortcuts-trigger" id="shortcuts-trigger" aria-haspopup="dialog" aria-controls="shortcuts-dialog">
+          <span>Keyboard shortcuts</span>
+          <kbd class="kbd-hint">?</kbd>
+        </button>
+      </div>
+    </aside>
 
-            <div class="hero-media">
-              <img
-                src="/showcase/village-overcast-morning.jpg"
-                alt="Copperleaf Hollow stone bridge and timber cottages rendered under soft overcast daylight"
-                referrerpolicy="no-referrer"
-              >
-              <div class="hero-media-bar">
-                <span class="hero-media-meta">Copperleaf Hollow · Overcast Morning Look</span>
-                <a href="./village/" class="hero-media-link">Open scene &rarr;</a>
-              </div>
-            </div>
+    <main class="main-viewport" id="main-viewport">
+      <section class="hero-box" id="top" aria-labelledby="hero-heading">
+        <div class="hero-copy">
+          <span class="label">Three.js Visualization Library</span>
+          <h1 class="hero-title" id="hero-heading">Turn an idea into a 3D scene.</h1>
+          <p class="hero-lead">
+            Shape the world, model its rules, make it interactive, and verify every frame on screen. Explore 37 runnable Three.js studies across anatomy, mathematics, physics, crafted worlds, and lighting.
+          </p>
+          <div class="hero-actions">
+            <a href="#studies" class="btn btn-primary" data-nav-link>Explore 37 Studies</a>
+            <a href="./heart/" class="btn">Open The Living Heart</a>
           </div>
         </div>
 
-        <div class="proof-strip">
-          <div class="container">
-            <div class="proof-grid">
-              <div class="proof-item">
-                <span class="proof-value">37</span>
-                <span class="proof-label">Interactive Studies</span>
-                <span class="proof-note">5 chapters, directly runnable</span>
-              </div>
-              <div class="proof-item">
-                <span class="proof-value">223</span>
-                <span class="proof-label">Authored Recipes</span>
-                <span class="proof-note">24 directions, min 6 each</span>
-              </div>
-              <div class="proof-item">
-                <span class="proof-value">440</span>
-                <span class="proof-label">Knowledge Records</span>
-                <span class="proof-note">18 families, 69 with defaults</span>
-              </div>
-              <div class="proof-item">
-                <span class="proof-value">22</span>
-                <span class="proof-label">Blueprint Kits</span>
-                <span class="proof-note">Verified modular Three.js builds</span>
-              </div>
-            </div>
+        <div class="hero-frame">
+          <img
+            src="/showcase/village-overcast-morning.jpg"
+            alt="Copperleaf Hollow stone bridge and timber cottages rendered under soft overcast daylight"
+            referrerpolicy="no-referrer"
+          >
+          <div class="hero-frame-bar">
+            <span>COPPERLEAF HOLLOW · OVERCAST MORNING LOOK</span>
+            <a href="./village/" class="hero-frame-link">OPEN SCENE &rarr;</a>
           </div>
         </div>
       </section>
 
-      <section class="band" id="studies" aria-labelledby="studies-heading">
-        <div class="container">
-          <div class="section-head">
-            <div>
-              <p class="section-kicker">Interactive Catalog</p>
-              <h2 class="section-title" id="studies-heading">37 Runnable 3D Studies</h2>
-            </div>
-            <p class="section-subtitle">
-              Filter by chapter or preview any study directly in an interactive Three.js viewport. Every study includes overview and detail views, orbit controls, and subject parameters.
+      <section class="stats-strip" aria-label="Repository coverage">
+        <div class="stat-item" tabindex="0" data-stat-key="studies">
+          <div class="stat-head">
+            <span class="label">Studies</span>
+            <span class="stat-cue" aria-hidden="true">?</span>
+          </div>
+          <span class="stat-val">37</span>
+          <span class="stat-note">5 chapters, directly runnable</span>
+        </div>
+        <div class="stat-item" tabindex="0" data-stat-key="recipes">
+          <div class="stat-head">
+            <span class="label">Recipes</span>
+            <span class="stat-cue" aria-hidden="true">?</span>
+          </div>
+          <span class="stat-val">223</span>
+          <span class="stat-note">24 directions, min 6 each</span>
+        </div>
+        <div class="stat-item" tabindex="0" data-stat-key="records">
+          <div class="stat-head">
+            <span class="label">Records</span>
+            <span class="stat-cue" aria-hidden="true">?</span>
+          </div>
+          <span class="stat-val">440</span>
+          <span class="stat-note">18 families, 69 with defaults</span>
+        </div>
+        <div class="stat-item" tabindex="0" data-stat-key="kits">
+          <div class="stat-head">
+            <span class="label">Kits</span>
+            <span class="stat-cue" aria-hidden="true">?</span>
+          </div>
+          <span class="stat-val">22</span>
+          <span class="stat-note">Verified modular Three.js builds</span>
+        </div>
+      </section>
+
+      <section id="studies" aria-labelledby="studies-heading">
+        <div class="section-header">
+          <div class="section-header-copy">
+            <span class="label">01 / Catalog</span>
+            <h2 id="studies-heading">Runnable 3D Studies</h2>
+          </div>
+          <p class="section-subtitle">
+            Filter by chapter or preview any study directly in an interactive Three.js viewport.
+          </p>
+        </div>
+
+        <div class="study-toolbar">
+          <div class="chapter-tabs" id="chapter-tabs" role="group" aria-label="Filter studies by chapter"></div>
+          <input
+            type="search"
+            id="study-search"
+            class="study-search"
+            placeholder="Filter by title, subject, or ID…"
+            aria-label="Filter studies"
+          >
+        </div>
+
+        <div class="content-grid" id="studies-grid"></div>
+      </section>
+
+      <section id="showcase" aria-labelledby="showcase-heading">
+        <div class="section-header">
+          <div class="section-header-copy">
+            <span class="label">02 / Gallery</span>
+            <h2 id="showcase-heading">Runtime Showcase</h2>
+          </div>
+          <p class="section-subtitle">
+            GPU captures rendered directly from the blueprint kits, studio rigs, and named lighting looks.
+          </p>
+        </div>
+
+        <div class="bento-section">
+          <div class="gallery-grid">
+            <a href="./village/" class="gallery-item gallery-item--wide">
+              <img src="/showcase/village-dusk-golden-hour.jpg" alt="Copperleaf Hollow island diorama at dusk golden hour" loading="lazy" referrerpolicy="no-referrer">
+              <div class="gallery-caption">
+                <span class="gallery-meta">Crafted World · Dusk Golden Hour</span>
+                <h3>Copperleaf Hollow Island</h3>
+              </div>
+            </a>
+
+            <a href="./cottage/" class="gallery-item">
+              <img src="/showcase/timber-cottage-t3-closeup.jpg" alt="Timber cottage close-up showing sill drips, peg heads, and timber framing" loading="lazy" referrerpolicy="no-referrer">
+              <div class="gallery-caption">
+                <span class="gallery-meta">Blueprint Kit · Hero Detail</span>
+                <h3>Timber Cottage Close-up</h3>
+              </div>
+            </a>
+
+            <a href="./gears/" class="gallery-item">
+              <img src="/showcase/coupled-gears-studio.jpg" alt="Steel and brass 24 to 16 tooth coupled spur gears in dark studio lighting" loading="lazy" referrerpolicy="no-referrer">
+              <div class="gallery-caption">
+                <span class="gallery-meta">Mechanism · Three-Panel Studio</span>
+                <h3>Coupled Spur Gears (3:2)</h3>
+              </div>
+            </a>
+
+            <a href="./night-river/" class="gallery-item">
+              <img src="/showcase/village-night-lantern-river.jpg" alt="Riverside village at night illuminated by warm lantern pools" loading="lazy" referrerpolicy="no-referrer">
+              <div class="gallery-caption">
+                <span class="gallery-meta">Lighting Study · Practical Night</span>
+                <h3>Lanterns by the River</h3>
+              </div>
+            </a>
+
+            <a href="./night-bridge/" class="gallery-item">
+              <img src="/showcase/stone-bridge-over-water.jpg" alt="Arched stone bridge crossing running river water" loading="lazy" referrerpolicy="no-referrer">
+              <div class="gallery-caption">
+                <span class="gallery-meta">Architecture · Water Surface</span>
+                <h3>Stone Bridge &amp; Stream</h3>
+              </div>
+            </a>
+
+            <a href="./bloch/" class="gallery-item gallery-item--wide">
+              <img src="/showcase/bloch-ball-linear-algebra.jpg" alt="Single-qubit Bloch sphere technical illustration" loading="lazy" referrerpolicy="no-referrer">
+              <div class="gallery-caption">
+                <span class="gallery-meta">Mathematics · Technical Illustration</span>
+                <h3>Single-Qubit Bloch Compass</h3>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section id="workflow" aria-labelledby="workflow-heading">
+        <div class="section-header">
+          <div class="section-header-copy">
+            <span class="label">03 / Workflow</span>
+            <h2 id="workflow-heading">How One Sentence Becomes a Scene</h2>
+          </div>
+          <p class="section-subtitle">
+            Creative direction comes before templates: proportions, grounded sources, interactive controls, and observed frame inspection.
+          </p>
+        </div>
+
+        <div class="workflow-grid">
+          <article class="workflow-step">
+            <span class="workflow-num">01</span>
+            <h3>Intent &amp; Visual Direction</h3>
+            <p>Establish silhouette, lighting mood, camera framing, and palette before writing geometry code.</p>
+          </article>
+          <article class="workflow-step">
+            <span class="workflow-num">02</span>
+            <h3>Object Reasoning &amp; Routing</h3>
+            <p>Decompose parts, joints, and scales; route between proved blueprint kits, procedural rigs, or registered meshes.</p>
+          </article>
+          <article class="workflow-step">
+            <span class="workflow-num">03</span>
+            <h3>Build &amp; Grounded Behavior</h3>
+            <p>Bind motion and cutaways to real underlying state while stating scope, sources, and honest limits.</p>
+          </article>
+          <article class="workflow-step">
+            <span class="workflow-num">04</span>
+            <h3>Run, Capture &amp; Refine</h3>
+            <p>Inspect rendered viewpoints and interactions directly in WebGL, refining lighting and geometry from observed frames.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="directions" aria-labelledby="directions-heading">
+        <div class="section-header">
+          <div class="section-header-copy">
+            <span class="label">04 / Directions</span>
+            <h2 id="directions-heading">24 Registered Directions</h2>
+          </div>
+          <p class="section-subtitle">
+            223 recipes spanning worlds, science, engineering, and abstract systems.
+          </p>
+        </div>
+
+        <div class="directions-grid">
+          <div class="direction-group">
+            <h3>Worlds &amp; Craft</h3>
+            <ul class="direction-list">
+              <li>Environments &amp; Islands</li>
+              <li>Characters &amp; Motion Art</li>
+              <li>Architecture &amp; Interiors</li>
+              <li>Products &amp; Assemblies</li>
+              <li>Operations &amp; Logistics</li>
+              <li>Earth &amp; Environment</li>
+            </ul>
+          </div>
+          <div class="direction-group">
+            <h3>Anatomy &amp; Science</h3>
+            <ul class="direction-list">
+              <li>Registered Anatomy</li>
+              <li>Physiology &amp; Biomechanics</li>
+              <li>Molecules &amp; Materials</li>
+              <li>Waves, Optics &amp; Fields</li>
+              <li>Soft, Fluid &amp; Thermal</li>
+              <li>Astronomy &amp; Space</li>
+            </ul>
+          </div>
+          <div class="direction-group">
+            <h3>Math &amp; Logic</h3>
+            <ul class="direction-list">
+              <li>Linear Algebra</li>
+              <li>Calculus &amp; Vector Fields</li>
+              <li>Solid Geometry</li>
+              <li>Topology &amp; Symmetry</li>
+              <li>Probability &amp; Statistics</li>
+              <li>Logic &amp; Circuits</li>
+            </ul>
+          </div>
+          <div class="direction-group">
+            <h3>Mechanics &amp; Systems</h3>
+            <ul class="direction-list">
+              <li>Rigid Mechanics</li>
+              <li>Robotics &amp; Control</li>
+              <li>Algorithms &amp; Structures</li>
+              <li>Twisty Puzzles</li>
+              <li>Spatial Puzzles</li>
+              <li>Abstract Systems</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <footer class="site-footer" aria-labelledby="sponsor-heading">
+        <div class="footer-sponsor">
+          <div class="sponsor-copy">
+            <span class="label sponsor-kicker">Primary Project Sponsor</span>
+            <h2 class="sponsor-name" id="sponsor-heading">Next Gen AI LLC</h2>
+            <p class="sponsor-desc">
+              Sponsoring open-source 3D visualization showcases and interactive WebGL exploration — demonstrating what can be utilized, adapted, and built on open web standards.
             </p>
           </div>
-
-          <div class="study-toolbar">
-            <div class="chapter-tabs" id="chapter-tabs" role="group" aria-label="Filter studies by chapter"></div>
-            <input
-              type="search"
-              id="study-search"
-              class="study-search"
-              placeholder="Filter by title, subject, or ID…"
-              aria-label="Filter studies"
+          <div class="sponsor-cta">
+            <a
+              href="https://github.com/NextGenAILLC"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-primary"
             >
+              Visit Next Gen AI LLC &rarr;
+            </a>
           </div>
-
-          <div class="studies-grid" id="studies-grid"></div>
         </div>
-      </section>
 
-      <section class="band band-tinted" id="showcase" aria-labelledby="showcase-heading">
-        <div class="container">
-          <div class="section-head">
-            <div>
-              <p class="section-kicker">Observed Captures</p>
-              <h2 class="section-title" id="showcase-heading">Runtime Showcase Gallery</h2>
-            </div>
-            <p class="section-subtitle">
-              Headless Chromium GPU captures rendered directly from the skill’s blueprint kits, studio rigs, and named lighting looks.
+        <div class="footer-legal">
+          <div class="footer-copy">
+            <span class="label">License &amp; Attribution</span>
+            <p>
+              3Dviz Pro Max repository code, data, and authored scenes are MIT Licensed (&copy; 2026 Viettranx). Anatomy STL meshes are provided by BodyParts3D (&copy; The Database Center for Life Science, CC BY-SA 2.1 Japan via the Kevin Moerman STL mirror).
             </p>
           </div>
-
-          <div class="bento-grid">
-            <a href="./village/" class="bento-card bento-card--wide">
-              <div class="bento-media">
-                <img src="/showcase/village-dusk-golden-hour.jpg" alt="Copperleaf Hollow island diorama at dusk golden hour" loading="lazy" referrerpolicy="no-referrer">
-              </div>
-              <div class="bento-body">
-                <span class="bento-meta">Crafted World · Dusk Golden Hour</span>
-                <h3 class="bento-title">Copperleaf Hollow Island</h3>
-                <p class="bento-caption">Inn, round tower, long hall, stone bridge, and pond composed under a warm horizon key with instanced conifers and rock skirt.</p>
-              </div>
-            </a>
-
-            <a href="./cottage/" class="bento-card">
-              <div class="bento-media">
-                <img src="/showcase/timber-cottage-t3-closeup.jpg" alt="Timber cottage close-up showing sill drips, peg heads, and timber framing" loading="lazy" referrerpolicy="no-referrer">
-              </div>
-              <div class="bento-body">
-                <span class="bento-meta">Blueprint Kit · Hero Detail</span>
-                <h3 class="bento-title">Timber Cottage Close-up</h3>
-                <p class="bento-caption">Framed close enough to read sill drips, recessed window frames, and timber peg heads.</p>
-              </div>
-            </a>
-
-            <a href="./gears/" class="bento-card">
-              <div class="bento-media">
-                <img src="/showcase/coupled-gears-studio.jpg" alt="Steel and brass 24 to 16 tooth coupled spur gears in dark studio lighting" loading="lazy" referrerpolicy="no-referrer">
-              </div>
-              <div class="bento-body">
-                <span class="bento-meta">Mechanism · Three-Panel Studio</span>
-                <h3 class="bento-title">Coupled Spur Gears (3:2)</h3>
-                <p class="bento-caption">24/16-tooth steel and brass pair lit by softbox RectAreaLights in a dark studio rig.</p>
-              </div>
-            </a>
-
-            <a href="./night-river/" class="bento-card">
-              <div class="bento-media">
-                <img src="/showcase/village-night-lantern-river.jpg" alt="Riverside village at night illuminated by warm lantern pools" loading="lazy" referrerpolicy="no-referrer">
-              </div>
-              <div class="bento-body">
-                <span class="bento-meta">Lighting Study · Practical Night</span>
-                <h3 class="bento-title">Lanterns by the River</h3>
-                <p class="bento-caption">Practical lanterns act as the primary key light, carving warm pools out of cool twilight.</p>
-              </div>
-            </a>
-
-            <a href="./night-bridge/" class="bento-card">
-              <div class="bento-media">
-                <img src="/showcase/stone-bridge-over-water.jpg" alt="Arched stone bridge crossing running river water" loading="lazy" referrerpolicy="no-referrer">
-              </div>
-              <div class="bento-body">
-                <span class="bento-meta">Architecture · Water Surface</span>
-                <h3 class="bento-title">Stone Bridge &amp; Stream</h3>
-                <p class="bento-caption">Dressed bridge arches and stepped approaches anchored over the animated river plane.</p>
-              </div>
-            </a>
-
-            <a href="./bloch/" class="bento-card bento-card--wide">
-              <div class="bento-media">
-                <img src="/showcase/bloch-ball-linear-algebra.jpg" alt="Single-qubit Bloch sphere technical illustration" loading="lazy" referrerpolicy="no-referrer">
-              </div>
-              <div class="bento-body">
-                <span class="bento-meta">Mathematics · Technical Illustration</span>
-                <h3 class="bento-title">Single-Qubit Bloch Compass</h3>
-                <p class="bento-caption">Pure-state vector at polar 55 deg and azimuth 35 deg — crisp unlit diagram fills on a bright stage.</p>
-              </div>
-            </a>
+          <div class="footer-actions">
+            <button type="button" class="btn btn-compact" data-replay-heart>Replay Heart Intro</button>
+            <a href="./heart/" class="btn btn-primary btn-compact">Open Heart Study</a>
           </div>
         </div>
-      </section>
-
-      <section class="band" id="workflow" aria-labelledby="workflow-heading">
-        <div class="container">
-          <div class="section-head">
-            <div>
-              <p class="section-kicker">Ten-Step Skill Method</p>
-              <h2 class="section-title" id="workflow-heading">How One Sentence Becomes a Scene</h2>
-            </div>
-            <p class="section-subtitle">
-              Creative direction comes before templates: proportions, grounded physics or anatomy sources, interactive controls, and observed frame inspection.
-            </p>
-          </div>
-
-          <div class="workflow-grid">
-            <article class="workflow-step">
-              <span class="workflow-num">01</span>
-              <h3>Intent &amp; Visual Direction</h3>
-              <p>Establish silhouette, lighting mood, camera framing, and palette before writing geometry code.</p>
-            </article>
-            <article class="workflow-step">
-              <span class="workflow-num">02</span>
-              <h3>Object Reasoning &amp; Routing</h3>
-              <p>Decompose parts, joints, and scales; route between proved blueprint kits, procedural rigs, or registered meshes.</p>
-            </article>
-            <article class="workflow-step">
-              <span class="workflow-num">03</span>
-              <h3>Build &amp; Grounded Behavior</h3>
-              <p>Bind motion and cutaways to real underlying state while stating scope, sources, and honest limits.</p>
-            </article>
-            <article class="workflow-step">
-              <span class="workflow-num">04</span>
-              <h3>Run, Capture &amp; Refine</h3>
-              <p>Inspect rendered viewpoints and interactions directly in WebGL, refining lighting and geometry from observed frames.</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section class="band band-tinted" id="directions" aria-labelledby="directions-heading">
-        <div class="container">
-          <div class="section-head">
-            <div>
-              <p class="section-kicker">Domain Coverage</p>
-              <h2 class="section-title" id="directions-heading">24 Registered Directions</h2>
-            </div>
-            <p class="section-subtitle">
-              223 recipes spanning worlds, science, engineering, and abstract systems — each backed by reusable defaults and verification rules.
-            </p>
-          </div>
-
-          <div class="directions-grid">
-            <div class="direction-group">
-              <h3>Worlds &amp; Craft</h3>
-              <ul class="direction-list">
-                <li>Environments &amp; Islands</li>
-                <li>Characters &amp; Motion Art</li>
-                <li>Architecture &amp; Interiors</li>
-                <li>Products &amp; Assemblies</li>
-                <li>Operations &amp; Logistics</li>
-                <li>Earth &amp; Environment</li>
-              </ul>
-            </div>
-            <div class="direction-group">
-              <h3>Anatomy &amp; Science</h3>
-              <ul class="direction-list">
-                <li>Registered Anatomy</li>
-                <li>Physiology &amp; Biomechanics</li>
-                <li>Molecules &amp; Materials</li>
-                <li>Waves, Optics &amp; Fields</li>
-                <li>Soft, Fluid &amp; Thermal</li>
-                <li>Astronomy &amp; Space</li>
-              </ul>
-            </div>
-            <div class="direction-group">
-              <h3>Math &amp; Logic</h3>
-              <ul class="direction-list">
-                <li>Linear Algebra</li>
-                <li>Calculus &amp; Vector Fields</li>
-                <li>Solid Geometry</li>
-                <li>Topology &amp; Symmetry</li>
-                <li>Probability &amp; Statistics</li>
-                <li>Logic &amp; Circuits</li>
-              </ul>
-            </div>
-            <div class="direction-group">
-              <h3>Mechanics &amp; Systems</h3>
-              <ul class="direction-list">
-                <li>Rigid Mechanics</li>
-                <li>Robotics &amp; Control</li>
-                <li>Algorithms &amp; Structures</li>
-                <li>Twisty Puzzles</li>
-                <li>Spatial Puzzles</li>
-                <li>Abstract Systems</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
+      </footer>
     </main>
-
-    <footer class="site-footer">
-      <div class="container">
-        <div class="footer-inner">
-          <div>
-            <strong class="brand-name">3Dviz Pro Max</strong>
-            <p class="footer-meta">
-              Repository code, data, and authored scenes are MIT licensed. Anatomy STL meshes are from BodyParts3D (&copy; The Database Center for Life Science, CC BY-SA 2.1 Japan via the Kevin Moerman STL mirror).
-            </p>
-          </div>
-          <div class="footer-links">
-            <button type="button" class="btn btn-secondary btn-compact" data-replay-heart>Replay Heart Intro</button>
-            <a href="./heart/" class="btn btn-primary btn-compact">Open The Living Heart</a>
-          </div>
-        </div>
-      </div>
-    </footer>
   </div>
 
   <!-- Interactive Study Preview Modal -->
@@ -339,6 +354,45 @@
     </div>
     <iframe id="study-dialog-frame" class="study-dialog-frame" title="Interactive 3D study preview" src="about:blank"></iframe>
   </dialog>
+
+  <!-- Keyboard Shortcuts Reference Modal -->
+  <dialog id="shortcuts-dialog" class="shortcuts-dialog" aria-labelledby="shortcuts-dialog-title">
+    <div class="study-dialog-head">
+      <h2 id="shortcuts-dialog-title" class="study-dialog-title">Keyboard Shortcuts</h2>
+      <button type="button" id="shortcuts-dialog-close" class="study-dialog-close">Close (Esc)</button>
+    </div>
+    <div class="shortcuts-body">
+      <div class="shortcuts-group">
+        <span class="label">Section Navigation</span>
+        <ul class="shortcuts-list">
+          <li><span>Jump to top</span><span class="shortcut-keys"><kbd>0</kbd> <span class="shortcut-or">or</span> <kbd>T</kbd></span></li>
+          <li><span>01 Studies Catalog</span><kbd>1</kbd></li>
+          <li><span>02 Runtime Showcase</span><kbd>2</kbd></li>
+          <li><span>03 Skill Workflow</span><kbd>3</kbd></li>
+          <li><span>04 Registered Directions</span><kbd>4</kbd></li>
+          <li><span>Filter studies search</span><kbd>/</kbd></li>
+        </ul>
+      </div>
+      <div class="shortcuts-group">
+        <span class="label">The Living Heart &amp; Controls</span>
+        <ul class="shortcuts-list">
+          <li><span>Open The Living Heart study</span><kbd>H</kbd></li>
+          <li><span>Preview The Living Heart modal</span><span class="shortcut-keys"><kbd>Shift</kbd> + <kbd>H</kbd></span></li>
+          <li><span>Replay beating heart intro</span><kbd>R</kbd></li>
+          <li><span>Toggle this shortcuts sheet</span><kbd>?</kbd></li>
+          <li><span>Close dialog or clear focus</span><kbd>Esc</kbd></li>
+        </ul>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="stat-tooltip" class="stat-tooltip" role="tooltip" hidden>
+    <p class="stat-tooltip-title" id="stat-tooltip-title"></p>
+    <p class="stat-tooltip-body" id="stat-tooltip-body"></p>
+    <p class="stat-tooltip-meta" id="stat-tooltip-meta"></p>
+  </div>
+
+  <div id="shortcut-toast" class="shortcut-toast" role="status" aria-live="polite" hidden></div>
 
   <script type="module" src="./landing/main.js"></script>
 </body>

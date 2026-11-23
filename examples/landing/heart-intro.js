@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { createScene } from '../shared/art-science/scenes/heart.js';
 import { createStudioRig } from '../shared/lighting-studio.js';
 import { disposeGroup } from '../shared/art-science/scene-kit.js';
+import { createHeartbeatAudio } from './heartbeat-audio.js';
 
 function detectSoftwareWebGL() {
   try {
@@ -26,10 +27,13 @@ function easeInOutCubic(t) {
   return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 }
 
+const ICON_SOUND_ON = `<svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8v4h3.2l4.3 3.5V4.5L6.7 8H3.5Z"/><path d="M13.8 7.2a4.2 4.2 0 0 1 0 5.6"/><path d="M16 5.2a7 7 0 0 1 0 9.6"/></svg>`;
+const ICON_SOUND_OFF = `<svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8v4h3.2l4.3 3.5V4.5L6.7 8H3.5Z"/><path d="M14 7.5 17.5 12.5M17.5 7.5 14 12.5"/></svg>`;
+
 /**
  * Mounts The Living Heart directly as an intro component on the landing page,
- * displays its live cardiac beat briefly, then dissolves cleanly to reveal
- * the landing page and disposes all WebGL resources.
+ * displays its live cardiac beat briefly with soft synchronized heartbeat audio,
+ * then dissolves cleanly to reveal the landing page and disposes WebGL + audio resources.
  */
 export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
   if (!container) {
@@ -42,7 +46,7 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const HOLD_DURATION_MS = prefersReducedMotion ? 1100 : 2800;
+  const HOLD_DURATION_MS = prefersReducedMotion ? 1100 : 3200;
   const DISSOLVE_DURATION_MS = prefersReducedMotion ? 320 : 900;
 
   // Build intro DOM fresh inside container
@@ -50,6 +54,7 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
   container.className = 'heart-intro is-entering';
   container.setAttribute('aria-hidden', 'false');
   container.innerHTML = `
+    <div class="heart-intro-glow" aria-hidden="true"></div>
     <canvas class="heart-intro-canvas" aria-hidden="true"></canvas>
     <div class="heart-intro-hud">
       <div class="heart-intro-brand">
@@ -62,9 +67,19 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
         </svg>
         <span>3Dviz Pro Max</span>
       </div>
-      <button type="button" class="heart-intro-skip" id="heart-intro-skip">
-        Skip intro
-      </button>
+      <div class="heart-intro-actions">
+        <button type="button" class="heart-intro-boost" id="heart-intro-boost" title="Trigger 1s heartbeat surge (B)">
+          <span>Boost Beat</span>
+          <kbd>B</kbd>
+        </button>
+        <button type="button" class="heart-intro-sound" id="heart-intro-sound" aria-pressed="true" title="Toggle heartbeat sound (M)">
+          <span class="heart-intro-sound-icon">${ICON_SOUND_ON}</span>
+          <span class="heart-intro-sound-label">Sound: On</span>
+        </button>
+        <button type="button" class="heart-intro-skip" id="heart-intro-skip">
+          Skip intro
+        </button>
+      </div>
     </div>
     <div class="heart-intro-caption">
       <p class="heart-intro-kicker">01 / THE LIVING BODY · LIVE THREE.JS PRELUDE</p>
@@ -78,10 +93,15 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
 
   document.body.classList.add('intro-locked');
 
+  const glowEl = container.querySelector('.heart-intro-glow');
   const canvas = container.querySelector('.heart-intro-canvas');
   const statusEl = container.querySelector('#heart-intro-status');
   const barEl = container.querySelector('#heart-intro-bar');
   const skipBtn = container.querySelector('#heart-intro-skip');
+  const boostBtn = container.querySelector('#heart-intro-boost');
+  const soundBtn = container.querySelector('#heart-intro-sound');
+  const soundIconEl = soundBtn?.querySelector('.heart-intro-sound-icon');
+  const soundLabelEl = soundBtn?.querySelector('.heart-intro-sound-label');
 
   let disposed = false;
   let rafId = null;
@@ -90,6 +110,33 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
   let beatStartTime = 0;
   let dissolveStartTime = 0;
   let lastFrameTime = 0;
+  let audioCyclePhase = 0.14;
+  let lubGlow = 0;
+  let dubGlow = 0;
+  let boostGlow = 0;
+  let scriptedBoostFired = false;
+
+  function crossedPhase(prev, curr, target) {
+    return prev <= curr ? prev < target && curr >= target : prev < target || curr >= target;
+  }
+
+  function updateGlow(dt, fadeMultiplier = 1) {
+    if (!glowEl) return;
+    if (prefersReducedMotion) {
+      glowEl.style.opacity = (0.28 * fadeMultiplier).toFixed(3);
+      glowEl.style.transform = 'scale(1)';
+      return;
+    }
+    lubGlow *= Math.exp(-dt * 7.0);
+    dubGlow *= Math.exp(-dt * 9.0);
+    boostGlow *= Math.exp(-dt * 2.4);
+    const boostLift = 1 + boostGlow * 0.28;
+    const pulse = Math.min(1, (lubGlow * 0.85 + dubGlow * 0.58) * boostLift);
+    const opacity = (0.2 + pulse * 0.76) * fadeMultiplier;
+    const scale = 0.94 + pulse * 0.16;
+    glowEl.style.opacity = opacity.toFixed(3);
+    glowEl.style.transform = `scale(${scale.toFixed(4)})`;
+  }
 
   let renderer = null;
   let studio = null;
@@ -99,6 +146,94 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
   const fadeMaterials = [];
 
   const glCaps = detectSoftwareWebGL();
+
+  function updateSoundButton({ muted, suspended, boosted = false }) {
+    if (!soundBtn) return;
+    if (!heartbeatAudio.isSupported) {
+      soundBtn.hidden = true;
+      if (boostBtn) boostBtn.hidden = true;
+      return;
+    }
+    const active = !muted && !suspended;
+    soundBtn.setAttribute('aria-pressed', String(active));
+    soundBtn.classList.toggle('is-prompting', !muted && suspended);
+    if (soundIconEl) {
+      soundIconEl.innerHTML = muted ? ICON_SOUND_OFF : ICON_SOUND_ON;
+    }
+    if (soundLabelEl) {
+      soundLabelEl.textContent = muted
+        ? 'Sound: Off'
+        : suspended
+          ? 'Tap for Audio'
+          : 'Sound: On';
+    }
+    if (boostBtn) {
+      boostBtn.classList.toggle('is-boosted', Boolean(boosted));
+      boostBtn.hidden = muted;
+    }
+    if (statusEl && phase === 'beating' && !prefersReducedMotion) {
+      statusEl.textContent =
+        !muted && suspended
+          ? 'Click anywhere for boom-boom audio · dissolving into site…'
+          : boosted
+            ? 'Peak cardiac beat · boom-boom boost active…'
+            : 'Cardiac cycle live · dissolving into landing page…';
+    }
+  }
+
+  const heartbeatAudio = createHeartbeatAudio({
+    onStateChange: updateSoundButton,
+    onBoostChange: (isBoosted) => {
+      if (isBoosted) boostGlow = 1;
+    },
+  });
+  updateSoundButton({
+    muted: heartbeatAudio.isMuted(),
+    suspended: heartbeatAudio.isSuspended(),
+    boosted: heartbeatAudio.isBoosted(),
+  });
+
+  async function fireImpactBoost({ immediateBoom = false } = {}) {
+    if (disposed || phase === 'dissolving' || phase === 'done') return;
+    const wasSuspended = heartbeatAudio.isSuspended();
+    if (wasSuspended) {
+      await heartbeatAudio.unlock();
+    }
+    if (heartbeatAudio.isMuted()) {
+      await heartbeatAudio.toggleMute();
+    }
+    boostGlow = 1;
+    if (immediateBoom || wasSuspended) {
+      lubGlow = 1;
+      window.setTimeout(() => {
+        if (!disposed) dubGlow = 0.72;
+      }, 240);
+      heartbeatAudio.playBoomBoom({ boost: true });
+    } else {
+      heartbeatAudio.triggerBoost(1.15);
+    }
+  }
+
+  function onContainerPointerDown(e) {
+    if (disposed || phase === 'dissolving' || phase === 'done') return;
+    if (
+      e.target instanceof Element &&
+      e.target.closest('#heart-intro-skip, #heart-intro-sound, #heart-intro-boost')
+    ) {
+      return;
+    }
+    if (heartbeatAudio.isSuspended()) {
+      fireImpactBoost({ immediateBoom: true });
+    }
+  }
+
+  boostBtn?.addEventListener('click', () => {
+    fireImpactBoost({ immediateBoom: true });
+  });
+  soundBtn?.addEventListener('click', () => {
+    heartbeatAudio.toggleMute();
+  });
+  container.addEventListener('pointerdown', onContainerPointerDown);
 
   function cleanup() {
     if (disposed) return;
@@ -116,6 +251,9 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
 
     window.removeEventListener('resize', onResize);
     window.removeEventListener('keydown', onKeyDown);
+    container.removeEventListener('pointerdown', onContainerPointerDown);
+
+    heartbeatAudio.dispose();
 
     if (heartResult?.group) {
       disposeGroup(heartResult.group);
@@ -150,6 +288,8 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
       safetyTimer = null;
     }
 
+    heartbeatAudio.fadeOut(DISSOLVE_DURATION_MS / 1000);
+
     if (statusEl) {
       statusEl.textContent = 'Opening 3Dviz Pro Max…';
     }
@@ -173,6 +313,26 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
   }
 
   function onKeyDown(e) {
+    if (e.key === 'b' || e.key === 'B') {
+      if (phase === 'loading' || phase === 'beating') {
+        e.preventDefault();
+        fireImpactBoost({ immediateBoom: true });
+      }
+      return;
+    }
+    if (e.key === 'm' || e.key === 'M') {
+      if (phase === 'loading' || phase === 'beating') {
+        e.preventDefault();
+        heartbeatAudio.toggleMute();
+      }
+      return;
+    }
+    if (
+      (e.target === soundBtn || e.target === boostBtn) &&
+      (e.key === 'Enter' || e.key === ' ')
+    ) {
+      return;
+    }
     if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
       if (phase === 'loading' || phase === 'beating') {
         e.preventDefault();
@@ -264,8 +424,23 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
           barEl.style.transform = `scaleX(${progress.toFixed(4)})`;
         }
 
-        // Advance cardiac beat (slightly lively 72 BPM during intro)
-        heartResult.update(prefersReducedMotion ? 0 : dt * 1.2);
+        // Advance cardiac beat (72 BPM during intro) and sync boom-boom audio + glow
+        const beatStep = prefersReducedMotion ? 0 : dt * 1.2;
+        heartResult.update(beatStep);
+        const prevPhase = audioCyclePhase;
+        audioCyclePhase = (audioCyclePhase + (prefersReducedMotion ? dt * 1.0 : beatStep)) % 1;
+        if (crossedPhase(prevPhase, audioCyclePhase, 0.17)) lubGlow = 1;
+        if (crossedPhase(prevPhase, audioCyclePhase, 0.48)) dubGlow = 0.72;
+
+        // Scripted ~1.15s peak boom-boom surge right on the hero middle beat before dissolving
+        if (!scriptedBoostFired && !prefersReducedMotion && elapsed >= 680) {
+          scriptedBoostFired = true;
+          heartbeatAudio.triggerBoost(1.15);
+          boostGlow = 1;
+        }
+
+        heartbeatAudio.syncPhase(audioCyclePhase);
+        updateGlow(dt, 1);
 
         // Gentle orbital drift + subtle push-in while heart beats
         const drift = prefersReducedMotion ? 0 : easeOutCubic(progress);
@@ -287,7 +462,14 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
         const eased = easeInOutCubic(dProgress);
         const remaining = 1 - eased;
 
-        heartResult.update(prefersReducedMotion ? 0 : dt * 0.8);
+        const fadeStep = prefersReducedMotion ? 0 : dt * 0.8;
+        heartResult.update(fadeStep);
+        const prevPhase = audioCyclePhase;
+        audioCyclePhase = (audioCyclePhase + fadeStep) % 1;
+        if (crossedPhase(prevPhase, audioCyclePhase, 0.17)) lubGlow = 1;
+        if (crossedPhase(prevPhase, audioCyclePhase, 0.48)) dubGlow = 0.72;
+        heartbeatAudio.syncPhase(audioCyclePhase);
+        updateGlow(dt, remaining);
 
         // Dissolve 3D heart opacity & gently expand/recede as landing page emerges
         for (const mat of fadeMaterials) {
@@ -342,8 +524,10 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
         }
       });
 
-      // Start right before a systolic beat so motion is immediately noticeable
-      result.update(0.18);
+      // Start just before ventricular systole (phase 0.14) so the first lub-dub aligns cleanly
+      audioCyclePhase = 0.14;
+      result.update(0.14);
+      heartbeatAudio.syncPhase(audioCyclePhase);
       renderer.render(scene, camera);
 
       if (phase === 'dissolving') {
@@ -360,7 +544,9 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
       if (statusEl) {
         statusEl.textContent = prefersReducedMotion
           ? '15 registered anatomical parts · opening landing page…'
-          : 'Cardiac cycle live · dissolving into landing page…';
+          : !heartbeatAudio.isMuted() && heartbeatAudio.isSuspended()
+            ? 'Click anywhere for boom-boom audio · dissolving into site…'
+            : 'Cardiac cycle live · dissolving into landing page…';
       }
 
       rafId = requestAnimationFrame(renderFrame);
@@ -373,6 +559,7 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
 
   return {
     skip: beginDissolve,
+    triggerBoost: () => fireImpactBoost({ immediateBoom: true }),
     destroy: cleanup,
   };
 }
