@@ -1,7 +1,8 @@
 /**
  * Physiological, speaker-audible "boom-boom" (S1 / S2) Web Audio synthesizer
- * synchronized to the 3D cardiac cycle, with a scripted short-second impact
- * boost, soft-clip warmth + brickwall limiting, smooth fade-out, and cleanup.
+ * synchronized to the 3D cardiac cycle, with stress-intensity modulation,
+ * scripted short-second impact boost, multi-beat boom sequences, smooth
+ * fade-out, and complete resource cleanup.
  */
 export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
   const AudioCtx =
@@ -15,8 +16,11 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
       isBoosted: () => false,
       unlock: async () => false,
       toggleMute: async () => true,
+      setStressIntensity: () => {},
       triggerBoost: () => {},
       playBoomBoom: () => {},
+      playBoomSequence: async () => {},
+      stopSequence: () => {},
       syncPhase: () => {},
       fadeOut: () => {},
       dispose: () => {},
@@ -34,15 +38,17 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
   let fading = false;
   let disposed = false;
   let boosted = false;
+  let stressIntensity = 0.25;
   let boostTimer = null;
+  let sequenceTimers = [];
   let lastPhase = null;
 
   const BASE_GAIN = 0.76;
-  const BOOST_GAIN = 1.32;
-  const BASE_FILTER_HZ = 360;
-  const BOOST_FILTER_HZ = 560;
+  const BOOST_GAIN = 1.36;
+  const BASE_FILTER_HZ = 350;
+  const BOOST_FILTER_HZ = 580;
 
-  function makeWarmthCurve(drive = 1.85) {
+  function makeWarmthCurve(drive = 1.9) {
     const samples = 1024;
     const curve = new Float32Array(samples);
     const norm = Math.tanh(drive);
@@ -53,6 +59,14 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
     return curve;
   }
 
+  function effectiveBaseGain() {
+    return BASE_GAIN + stressIntensity * 0.22;
+  }
+
+  function effectiveFilterHz() {
+    return BASE_FILTER_HZ + stressIntensity * 145;
+  }
+
   function ensureGraph() {
     if (ctx || disposed) return Boolean(ctx);
     try {
@@ -61,28 +75,28 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
       return false;
     }
 
-    // Warm lowpass preserves chesty sub-bass AND speaker-audible 100-350 Hz punch
+    // Warm lowpass preserves chesty sub-bass AND speaker-audible 100-480 Hz punch
     warmthFilter = ctx.createBiquadFilter();
     warmthFilter.type = 'lowpass';
-    warmthFilter.frequency.value = BASE_FILTER_HZ;
-    warmthFilter.Q.value = 0.75;
+    warmthFilter.frequency.value = effectiveFilterHz();
+    warmthFilter.Q.value = 0.78;
 
     // Subtle analog-style soft saturation adds rich harmonics on laptop/mobile speakers
     shaper = ctx.createWaveShaper();
-    shaper.curve = makeWarmthCurve(1.85);
+    shaper.curve = makeWarmthCurve(1.9);
     shaper.oversample = '2x';
 
-    // Master gain controlled by normal presence, short 1s impact boost, and dissolve fade
+    // Master gain controlled by baseline, stress intensity, short 1s impact boost, and dissolve fade
     masterGain = ctx.createGain();
-    masterGain.gain.value = muted ? 0 : BASE_GAIN;
+    masterGain.gain.value = muted ? 0 : effectiveBaseGain();
 
-    // Protective brickwall-style compressor keeps the boosted second punchy without clipping
+    // Protective brickwall-style compressor keeps the boosted boom punchy without clipping
     limiter = ctx.createDynamicsCompressor();
-    limiter.threshold.value = -6;
-    limiter.knee.value = 10;
-    limiter.ratio.value = 8;
+    limiter.threshold.value = -5.5;
+    limiter.knee.value = 9;
+    limiter.ratio.value = 9;
     limiter.attack.value = 0.003;
-    limiter.release.value = 0.14;
+    limiter.release.value = 0.13;
 
     warmthFilter.connect(shaper);
     shaper.connect(masterGain);
@@ -97,7 +111,7 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
     let smooth = 0;
     for (let i = 0; i < len; i++) {
       smooth = smooth * 0.84 + (Math.random() * 2 - 1) * 0.16;
-      data[i] = smooth * 2.6;
+      data[i] = smooth * 2.65;
     }
 
     ctx.addEventListener?.('statechange', notify);
@@ -111,6 +125,27 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
       suspended: ctx ? ctx.state === 'suspended' : false,
       boosted,
     });
+  }
+
+  function stopSequence() {
+    for (const id of sequenceTimers) {
+      clearTimeout(id);
+    }
+    sequenceTimers = [];
+  }
+
+  function setStressIntensity(level = 0.25) {
+    stressIntensity = Math.max(0, Math.min(1, Number(level) || 0));
+    if (disposed || fading || boosted || !ctx || !masterGain || !warmthFilter) return;
+    const now = ctx.currentTime;
+    if (!muted) {
+      masterGain.gain.cancelScheduledValues(now);
+      masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+      masterGain.gain.linearRampToValueAtTime(effectiveBaseGain(), now + 0.14);
+    }
+    warmthFilter.frequency.cancelScheduledValues(now);
+    warmthFilter.frequency.setValueAtTime(warmthFilter.frequency.value, now);
+    warmthFilter.frequency.linearRampToValueAtTime(effectiveFilterHz(), now + 0.14);
   }
 
   function triggerThump({
@@ -135,7 +170,7 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
     subOsc.frequency.exponentialRampToValueAtTime(subEnd, now + duration);
 
     subGain.gain.setValueAtTime(0.0001, now);
-    subGain.gain.linearRampToValueAtTime(level, now + 0.011);
+    subGain.gain.linearRampToValueAtTime(level, now + 0.01);
     subGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
     subOsc.connect(subGain);
@@ -151,7 +186,7 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
     punchOsc.frequency.exponentialRampToValueAtTime(punchEnd, now + duration * 0.72);
 
     punchGain.gain.setValueAtTime(0.0001, now);
-    punchGain.gain.linearRampToValueAtTime(level * 0.56, now + 0.008);
+    punchGain.gain.linearRampToValueAtTime(level * 0.6, now + 0.008);
     punchGain.gain.exponentialRampToValueAtTime(0.0001, now + duration * 0.74);
 
     punchOsc.connect(punchGain);
@@ -171,7 +206,7 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
 
       const nGain = ctx.createGain();
       nGain.gain.setValueAtTime(0.0001, now);
-      nGain.gain.linearRampToValueAtTime(level * 0.45, now + 0.012);
+      nGain.gain.linearRampToValueAtTime(level * 0.48, now + 0.011);
       nGain.gain.exponentialRampToValueAtTime(0.0001, now + duration * 0.68);
 
       noise.connect(bp);
@@ -182,30 +217,32 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
     }
   }
 
-  function playLub(delay = 0) {
+  function playLub(delay = 0, gainScale = 1) {
     // S1 ("BOOM"): deep, commanding ventricular systole thump
+    const lift = 1 + stressIntensity * 0.14;
     triggerThump({
-      subStart: 82,
+      subStart: 82 * lift,
       subEnd: 35,
-      punchStart: 158,
+      punchStart: 158 * lift,
       punchEnd: 70,
-      duration: 0.22,
-      level: 0.96,
-      bodyFreq: 138,
+      duration: 0.22 - stressIntensity * 0.03,
+      level: Math.min(1.18, 0.96 * gainScale),
+      bodyFreq: 138 + stressIntensity * 28,
       delay,
     });
   }
 
-  function playDub(delay = 0) {
+  function playDub(delay = 0, gainScale = 1) {
     // S2 ("boom"): tight, resonant valve-closure echo
+    const lift = 1 + stressIntensity * 0.12;
     triggerThump({
-      subStart: 96,
+      subStart: 96 * lift,
       subEnd: 43,
-      punchStart: 186,
+      punchStart: 186 * lift,
       punchEnd: 86,
-      duration: 0.16,
-      level: 0.74,
-      bodyFreq: 178,
+      duration: 0.16 - stressIntensity * 0.02,
+      level: Math.min(1.0, 0.74 * gainScale),
+      bodyFreq: 178 + stressIntensity * 32,
       delay,
     });
   }
@@ -220,20 +257,20 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
 
     const now = ctx.currentTime;
     const hold = Math.max(0.45, durationSeconds);
-    const attack = 0.09;
+    const attack = 0.08;
     const release = 0.34;
 
     masterGain.gain.cancelScheduledValues(now);
     masterGain.gain.setValueAtTime(Math.max(0.001, masterGain.gain.value), now);
     masterGain.gain.linearRampToValueAtTime(BOOST_GAIN, now + attack);
     masterGain.gain.setValueAtTime(BOOST_GAIN, now + Math.max(attack, hold - release));
-    masterGain.gain.linearRampToValueAtTime(BASE_GAIN, now + hold);
+    masterGain.gain.linearRampToValueAtTime(effectiveBaseGain(), now + hold);
 
     warmthFilter.frequency.cancelScheduledValues(now);
     warmthFilter.frequency.setValueAtTime(warmthFilter.frequency.value, now);
     warmthFilter.frequency.linearRampToValueAtTime(BOOST_FILTER_HZ, now + attack);
     warmthFilter.frequency.setValueAtTime(BOOST_FILTER_HZ, now + Math.max(attack, hold - release));
-    warmthFilter.frequency.linearRampToValueAtTime(BASE_FILTER_HZ, now + hold);
+    warmthFilter.frequency.linearRampToValueAtTime(effectiveFilterHz(), now + hold);
 
     boosted = true;
     onBoostChange?.(true);
@@ -252,7 +289,6 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
 
   /**
    * Immediately fires a single unmistakable "boom-boom" pair (S1 + S2).
-   * Useful on first gesture unlock or direct pulse trigger.
    */
   function playBoomBoom({ boost = true } = {}) {
     if (disposed || muted || !ctx || ctx.state !== 'running') return;
@@ -261,6 +297,64 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
     }
     playLub(0);
     playDub(0.24);
+  }
+
+  /**
+   * Plays a commanding multi-beat "boom-boom, boom-boom, boom-boom" sequence
+   * paced to the given BPM & physiological stress intensity, then settles cleanly.
+   */
+  async function playBoomSequence({
+    beats = 3,
+    bpm = 112,
+    intensity = 0.85,
+    boost = true,
+    onBeat = null,
+    onDone = null,
+  } = {}) {
+    if (disposed) return;
+    stopSequence();
+    fading = false;
+    muted = false;
+    setStressIntensity(intensity);
+
+    const unlocked = await unlock();
+    if (!unlocked || disposed) {
+      onDone?.();
+      return;
+    }
+
+    const cycleMs = Math.max(380, Math.round(60000 / Math.max(45, Math.min(165, bpm))));
+    const dubOffsetMs = Math.round(cycleMs * 0.31);
+    const totalMs = beats * cycleMs + 180;
+
+    if (boost) {
+      triggerBoost(Math.min(2.6, totalMs / 1000));
+    }
+
+    for (let i = 0; i < beats; i++) {
+      const startMs = i * cycleMs;
+      const accent = i === beats - 1 ? 1.12 : 1.0;
+
+      const tLub = window.setTimeout(() => {
+        if (disposed || muted) return;
+        playLub(0, accent);
+        onBeat?.(i, 'lub');
+      }, startMs);
+      sequenceTimers.push(tLub);
+
+      const tDub = window.setTimeout(() => {
+        if (disposed || muted) return;
+        playDub(0, accent);
+        onBeat?.(i, 'dub');
+      }, startMs + dubOffsetMs);
+      sequenceTimers.push(tDub);
+    }
+
+    const tEnd = window.setTimeout(() => {
+      sequenceTimers = [];
+      onDone?.();
+    }, totalMs);
+    sequenceTimers.push(tEnd);
   }
 
   function crossed(prev, curr, target) {
@@ -276,6 +370,14 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
     try {
       if (ctx.state === 'suspended') {
         await ctx.resume();
+      }
+      if (masterGain && ctx && !fading && !muted) {
+        const now = ctx.currentTime;
+        masterGain.gain.cancelScheduledValues(now);
+        masterGain.gain.setValueAtTime(
+          Math.max(0.001, boosted ? BOOST_GAIN : effectiveBaseGain()),
+          now
+        );
       }
       notify();
       return ctx.state === 'running';
@@ -304,7 +406,7 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
       masterGain.gain.cancelScheduledValues(now);
       masterGain.gain.setValueAtTime(masterGain.gain.value, now);
       masterGain.gain.linearRampToValueAtTime(
-        muted ? 0 : boosted ? BOOST_GAIN : BASE_GAIN,
+        muted ? 0 : boosted ? BOOST_GAIN : effectiveBaseGain(),
         now + 0.06
       );
     }
@@ -333,6 +435,7 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
     if (disposed || fading) return;
     fading = true;
     boosted = false;
+    stopSequence();
     if (boostTimer !== null) {
       clearTimeout(boostTimer);
       boostTimer = null;
@@ -351,6 +454,7 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
   function dispose() {
     if (disposed) return;
     disposed = true;
+    stopSequence();
     if (boostTimer !== null) {
       clearTimeout(boostTimer);
       boostTimer = null;
@@ -384,8 +488,11 @@ export function createHeartbeatAudio({ onStateChange, onBoostChange } = {}) {
     isBoosted: () => boosted,
     unlock,
     toggleMute,
+    setStressIntensity,
     triggerBoost,
     playBoomBoom,
+    playBoomSequence,
+    stopSequence,
     syncPhase,
     fadeOut,
     dispose,

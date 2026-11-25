@@ -37,6 +37,7 @@
 
         <nav aria-label="Primary">
           <ul class="nav-list">
+            <li><a href="#tactical-lens" data-nav-link><span>Tactical Lens</span><kbd class="kbd-hint">L</kbd></a></li>
             <li><a href="#studies" data-nav-link><span>01 Studies</span><kbd class="kbd-hint">1</kbd></a></li>
             <li><a href="#showcase" data-nav-link><span>02 Showcase</span><kbd class="kbd-hint">2</kbd></a></li>
             <li><a href="#workflow" data-nav-link><span>03 Workflow</span><kbd class="kbd-hint">3</kbd></a></li>
@@ -120,6 +121,124 @@
           </div>
           <span class="stat-val">22</span>
           <span class="stat-note">Verified modular Three.js builds</span>
+        </div>
+      </section>
+
+      <section id="tactical-lens" class="tactical-lens" aria-labelledby="tactical-lens-heading">
+        <div class="section-header">
+          <div class="section-header-copy">
+            <span class="label">Tactical Lens · Containerized Showcase</span>
+            <h2 id="tactical-lens-heading">The Developer’s Heart &amp; Athletic Field Lens</h2>
+          </div>
+          <p class="section-subtitle">
+            Containerized physiological modeling built with real-time WebGL and Web Audio — illustrating persistence through multi-day sleep deprivation alongside sports injury mechanics and tactical recovery.
+          </p>
+        </div>
+
+        <div class="redacted-boundary" role="note" aria-label="Data privacy and redaction notice">
+          <span>SUBJECT: SYNTH-DEV-001 [REDACTED]</span>
+          <span>SYNTHETIC TELEMETRY ONLY · ZERO PHI / HIPAA INGESTION · RBAC BOUNDARY ACTIVE</span>
+        </div>
+
+        <div class="lens-layout">
+          <div class="heart-lens-deck" id="heart-lens-deck" data-profile="sleep-debt">
+            <div class="lens-deck-head">
+              <div>
+                <span class="label">Persistence Under Stress · Cardiac Functionality</span>
+                <h3 class="lens-deck-title">Heart of a Persisting Developer</h3>
+              </div>
+              <span class="lens-bpm-readout" id="lens-bpm-readout">118 BPM</span>
+            </div>
+
+            <p class="lens-deck-copy">
+              Switch directly between physiological load states to feel how prolonged stress and days without sleep compress cardiac recovery — synced to live boom-boom-boom audio and the 3D Living Heart.
+            </p>
+
+            <div class="lens-profile-tabs" id="lens-profile-tabs" role="group" aria-label="Physiological load state">
+              <button type="button" class="lens-profile-btn" data-heart-profile="baseline" aria-pressed="false">Baseline Recovery</button>
+              <button type="button" class="lens-profile-btn" data-heart-profile="stress" aria-pressed="false">Developer Stress</button>
+              <button type="button" class="lens-profile-btn" data-heart-profile="sleep-debt" aria-pressed="true">72h Sleep Debt</button>
+              <button type="button" class="lens-profile-btn" data-heart-profile="tactical" aria-pressed="false">Tactical Peak</button>
+            </div>
+
+            <div class="lens-scope-frame" id="lens-scope-frame">
+              <div class="lens-scope-alert-glow" aria-hidden="true"></div>
+              <div class="lens-scope-alert-bar" id="lens-scope-alert-bar" role="status" aria-live="polite" hidden>
+                <span>CRITICAL STRESS THRESHOLD &middot; &gt;140 BPM</span>
+                <span id="lens-scope-alert-bpm">142 BPM</span>
+              </div>
+              <div id="lens-d3-chart" class="lens-d3-chart" aria-label="D3 real-time synthetic cardiac rhythm graph with 30-second trailing average line"></div>
+              <div class="lens-scope-legend" aria-live="polite">
+                <div class="lens-legend-keys">
+                  <span class="lens-legend-item">
+                    <span class="lens-legend-swatch lens-legend-swatch--live" aria-hidden="true"></span>
+                    <span>Live Pulse</span>
+                  </span>
+                  <span class="lens-legend-item">
+                    <span class="lens-legend-swatch lens-legend-swatch--avg" aria-hidden="true"></span>
+                    <span>30s Avg <strong id="lens-avg-bpm-readout">118.0 BPM</strong></span>
+                  </span>
+                  <span class="lens-legend-item lens-legend-item--hrv">
+                    <span class="lens-legend-swatch lens-legend-swatch--hrv" aria-hidden="true"></span>
+                    <span>HRV <strong id="lens-hrv-readout">21 ms</strong></span>
+                  </span>
+                </div>
+                <span class="lens-trend-status" id="lens-trend-status" data-trend="sustained-elevated">SUSTAINED ELEVATED</span>
+              </div>
+              <div class="lens-scope-meta">
+                <span id="lens-scope-label">SYNTHETIC PULSE · 72H SLEEP DEPRIVATION</span>
+                <span id="lens-scope-audio-state">AUDIO READY</span>
+              </div>
+            </div>
+
+            <div class="lens-metrics" aria-live="polite">
+              <div class="lens-metric">
+                <span class="label">Diastolic Recovery</span>
+                <strong id="lens-metric-recovery">Strained</strong>
+              </div>
+              <div class="lens-metric">
+                <span class="label">Autonomic Drive</span>
+                <strong id="lens-metric-drive">Sleep-Debt Overdrive</strong>
+              </div>
+              <div class="lens-metric">
+                <span class="label">Coronary Demand</span>
+                <strong id="lens-metric-demand">Elevated</strong>
+              </div>
+            </div>
+
+            <p class="lens-state-summary" id="lens-state-summary">
+              Sustained 72-hour sleep loss elevates resting sympathetic tone, shortens the diastolic filling window between beats, and drives persistent coronary oxygen demand.
+            </p>
+
+            <div class="lens-deck-actions">
+              <button type="button" class="btn btn-primary" id="lens-boom-btn">
+                Play Boom-Boom-Boom
+              </button>
+              <button type="button" class="btn" id="lens-preview-heart">
+                Preview 3D Heart
+              </button>
+              <a href="./heart/?profile=sleep-debt" class="btn" id="lens-open-heart">
+                Open 3D Study &rarr;
+              </a>
+            </div>
+          </div>
+
+          <div class="tactical-components">
+            <div class="tactical-toolbar">
+              <div>
+                <span class="label">Athletic &amp; Tactical Factors</span>
+                <h3 class="tactical-subhead">Injury, Load &amp; Recovery Modules</h3>
+              </div>
+              <div class="lens-filter-tabs" id="lens-filter-tabs" role="group" aria-label="Filter tactical and athletic factors">
+                <button type="button" class="chapter-tab" data-lens-filter="all" aria-pressed="true">All</button>
+                <button type="button" class="chapter-tab" data-lens-filter="injury" aria-pressed="false">Sports Injuries</button>
+                <button type="button" class="chapter-tab" data-lens-filter="stress" aria-pressed="false">Tactical Stress</button>
+                <button type="button" class="chapter-tab" data-lens-filter="recovery" aria-pressed="false">Recovery</button>
+              </div>
+            </div>
+
+            <div class="tactical-grid" id="tactical-grid"></div>
+          </div>
         </div>
       </section>
 
@@ -366,6 +485,7 @@
         <span class="label">Section Navigation</span>
         <ul class="shortcuts-list">
           <li><span>Jump to top</span><span class="shortcut-keys"><kbd>0</kbd> <span class="shortcut-or">or</span> <kbd>T</kbd></span></li>
+          <li><span>Tactical &amp; Athletic Lens</span><kbd>L</kbd></li>
           <li><span>01 Studies Catalog</span><kbd>1</kbd></li>
           <li><span>02 Runtime Showcase</span><kbd>2</kbd></li>
           <li><span>03 Skill Workflow</span><kbd>3</kbd></li>
@@ -390,6 +510,42 @@
     <p class="stat-tooltip-title" id="stat-tooltip-title"></p>
     <p class="stat-tooltip-body" id="stat-tooltip-body"></p>
     <p class="stat-tooltip-meta" id="stat-tooltip-meta"></p>
+  </div>
+
+  <div id="tactical-tooltip" class="tactical-tooltip" role="tooltip" hidden>
+    <div class="tactical-tooltip-head">
+      <div>
+        <span class="tactical-tooltip-load" id="tactical-tooltip-load"></span>
+        <p class="tactical-tooltip-title" id="tactical-tooltip-title"></p>
+      </div>
+      <button type="button" class="tactical-tooltip-close" id="tactical-tooltip-close" aria-label="Close recovery intel" hidden>&times;</button>
+    </div>
+    <div class="tactical-tooltip-meter" aria-hidden="true">
+      <div class="tactical-tooltip-meter-fill" id="tactical-tooltip-meter-fill"></div>
+    </div>
+    <div class="tactical-tooltip-stats">
+      <div class="tactical-tooltip-stat">
+        <span class="tactical-tooltip-stat-label">Readiness</span>
+        <strong id="tactical-tooltip-readiness"></strong>
+      </div>
+      <div class="tactical-tooltip-stat">
+        <span class="tactical-tooltip-stat-label">Recovery Window</span>
+        <strong id="tactical-tooltip-window"></strong>
+      </div>
+      <div class="tactical-tooltip-stat">
+        <span class="tactical-tooltip-stat-label" id="tactical-tooltip-risk-label">Load Metric</span>
+        <strong id="tactical-tooltip-risk-value"></strong>
+      </div>
+    </div>
+    <div class="tactical-tooltip-block">
+      <span class="tactical-tooltip-block-label">Physiological Impact</span>
+      <p id="tactical-tooltip-impact"></p>
+    </div>
+    <div class="tactical-tooltip-block">
+      <span class="tactical-tooltip-block-label">Injury Prevention</span>
+      <p id="tactical-tooltip-prevention"></p>
+    </div>
+    <p class="tactical-tooltip-meta" id="tactical-tooltip-meta"></p>
   </div>
 
   <div id="shortcut-toast" class="shortcut-toast" role="status" aria-live="polite" hidden></div>

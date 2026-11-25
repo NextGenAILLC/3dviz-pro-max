@@ -1,5 +1,9 @@
 import { artScience, breadth } from '../shared/catalog.js';
+import { parseSafeQuery, redactPhi } from '../shared/phi-guard.js';
 import { mountHeartIntro } from './heart-intro.js';
+import { createHeartbeatAudio } from './heartbeat-audio.js';
+import { mountHeartRhythmChart } from './heart-rhythm-chart.js';
+import { getTacticalRecoverySnapshot } from './tactical-recovery.js';
 
 const CHAPTERS = [
   {
@@ -166,11 +170,15 @@ function renderTabs() {
   }
 }
 
-function openStudyModal(study) {
+function openStudyModal(study, { query = '' } = {}) {
   if (!dialogEl || !dialogFrame) return;
+  stopLensAudio();
+  hideTacticalTooltip({ force: true });
+  const suffix = query ? `&${query}` : '';
+  const standaloneSuffix = query ? `?${query}` : '';
   if (dialogTitle) dialogTitle.textContent = study.title;
-  if (dialogLink) dialogLink.href = `./${study.id}/`;
-  dialogFrame.src = `./${study.id}/?embed=1`;
+  if (dialogLink) dialogLink.href = `./${study.id}/${standaloneSuffix}`;
+  dialogFrame.src = `./${study.id}/?embed=1${suffix}`;
   dialogEl.showModal();
 }
 
@@ -264,7 +272,13 @@ function renderStudies() {
 }
 
 searchInput?.addEventListener('input', (e) => {
-  searchTerm = e.target.value || '';
+  const raw = e.target.value || '';
+  const guarded = redactPhi(raw);
+  if (guarded.blocked) {
+    e.target.value = guarded.sanitized;
+    showShortcutToast('Sensitive identifier blocked · synthetic sandbox only');
+  }
+  searchTerm = guarded.sanitized;
   renderStudies();
 });
 
@@ -276,6 +290,7 @@ const mainViewport = document.getElementById('main-viewport');
 const navLinks = Array.from(document.querySelectorAll('.nav-list a[data-nav-link]'));
 const sectionTargets = {
   top: { el: document.getElementById('top'), label: '00 / TOP' },
+  'tactical-lens': { el: document.getElementById('tactical-lens'), label: 'TACTICAL LENS' },
   studies: { el: document.getElementById('studies'), label: '01 / STUDIES' },
   showcase: { el: document.getElementById('showcase'), label: '02 / SHOWCASE' },
   workflow: { el: document.getElementById('workflow'), label: '03 / WORKFLOW' },
@@ -312,7 +327,7 @@ for (const link of document.querySelectorAll('[data-nav-link]')) {
 }
 
 if (typeof IntersectionObserver !== 'undefined') {
-  const observedIds = ['studies', 'showcase', 'workflow', 'directions'];
+  const observedIds = ['tactical-lens', 'studies', 'showcase', 'workflow', 'directions'];
   const observer = new IntersectionObserver(
     (entries) => {
       const visible = entries
@@ -381,6 +396,8 @@ function isIntroActive() {
 
 function launchHeartIntro({ scrollTop = false } = {}) {
   if (!introContainer) return;
+  stopLensAudio();
+  hideTacticalTooltip({ force: true });
   closeShortcutsDialog();
   closeStudyModal();
   if (scrollTop) {
@@ -399,17 +416,592 @@ function launchHeartIntro({ scrollTop = false } = {}) {
   });
 }
 
-const skipIntroQuery = new URLSearchParams(window.location.search).get('skipIntro') === '1';
-if (skipIntroQuery && introContainer) {
+const safeQuery = parseSafeQuery(window.location.search);
+
+for (const btn of document.querySelectorAll('[data-replay-heart]')) {
+  btn.addEventListener('click', () => launchHeartIntro({ scrollTop: true }));
+}
+
+// Containerized Tactical & Athletic Physiology Lens (Developer Heart Stress + Sports Injuries)
+const LENS_HEART_PROFILES = {
+  baseline: {
+    id: 'baseline',
+    label: 'Baseline Recovery',
+    scopeTag: 'SYNTHETIC PULSE · BASELINE RECOVERY',
+    bpm: 62,
+    intensity: 0.2,
+    color: '#92d6bd',
+    recovery: 'Full diastolic fill',
+    drive: 'Parasympathetic',
+    demand: 'Nominal',
+    summary:
+      'Rested baseline rhythm with generous diastolic filling time between beats, balanced vagal tone, and low resting coronary demand.',
+  },
+  stress: {
+    id: 'stress',
+    label: 'Developer Stress',
+    scopeTag: 'SYNTHETIC PULSE · SUSTAINED DEVELOPER STRESS',
+    bpm: 96,
+    intensity: 0.58,
+    color: '#e2a568',
+    recovery: 'Compressed',
+    drive: 'Sympathetic Shift',
+    demand: 'Moderate-High',
+    summary:
+      'Persistent deadline pressure elevates sympathetic drive, narrows recovery intervals, and increases myocardial work even while seated at the workstation.',
+  },
+  'sleep-debt': {
+    id: 'sleep-debt',
+    label: '72h Sleep Debt',
+    scopeTag: 'SYNTHETIC PULSE · 72H SLEEP DEPRIVATION',
+    bpm: 118,
+    intensity: 0.86,
+    color: '#e46b7b',
+    recovery: 'Strained',
+    drive: 'Sleep-Debt Overdrive',
+    demand: 'Elevated',
+    summary:
+      'Days without sleep keep cortisol and sympathetic tone locked high — shortening diastolic fill recovery while driving persistent coronary oxygen demand.',
+  },
+  tactical: {
+    id: 'tactical',
+    label: 'Tactical Peak',
+    scopeTag: 'SYNTHETIC PULSE · TACTICAL / ATHLETIC PEAK',
+    bpm: 142,
+    intensity: 1.0,
+    color: '#ff6f80',
+    recovery: 'Minimal window',
+    drive: 'Peak Exertion Load',
+    demand: 'Maximal',
+    summary:
+      'High-output athletic or tactical exertion drives rapid ventricular cadence where stroke efficiency, heat load, and post-effort down-regulation govern resilience.',
+  },
+};
+
+const TACTICAL_FACTORS = [
+  {
+    id: 'cardiac-persistence',
+    category: 'stress',
+    kicker: 'Tactical Stress · Myocardial Load',
+    title: 'Cardiac Persistence & Sleep Debt',
+    description:
+      'Models sympathetic overdrive, coronary perfusion demand, and compressed diastolic fill across multi-day developer sprints or sustained tactical operations.',
+    factor: 'Primary lens: heart rate · myocardial strain · coronary flow',
+    studyId: 'heart',
+    query: 'profile=sleep-debt',
+    secondaryId: 'brain',
+    secondaryLabel: 'Preview Brain',
+  },
+  {
+    id: 'knee-cut-load',
+    category: 'injury',
+    kicker: 'Sports Injury · Joint Torque',
+    title: 'ACL, Meniscus & Deceleration Torque',
+    description:
+      'Inspects tibiofemoral alignment, patellar tracking, and flexion-extension shear zones where non-contact cutting, pivoting, and hard landings cause ligament trauma.',
+    factor: 'Primary lens: joint shear · flexion arc · landing load',
+    studyId: 'knee',
+    query: '',
+    secondaryId: null,
+    secondaryLabel: '',
+  },
+  {
+    id: 'upper-chain-overuse',
+    category: 'injury',
+    kicker: 'Sports Injury · Kinetic Chain',
+    title: 'Upper-Chain Overuse & Compensation',
+    description:
+      'Maps humerus-radius-ulna torque transfer alongside layered upper-body muscle families to highlight throwing strain, rotator fatigue, and postural overload.',
+    factor: 'Primary lens: tendon load · muscle recruitment · torque',
+    studyId: 'arm',
+    query: '',
+    secondaryId: 'muscle-atlas',
+    secondaryLabel: 'Muscle Atlas',
+  },
+  {
+    id: 'microfiber-reset',
+    category: 'recovery',
+    kicker: 'Recovery · Autonomic Down-Regulation',
+    title: 'Micro-Fiber Fatigue & Breath Reset',
+    description:
+      'Connects diaphragmatic dome mechanics for tactical box-breathing recovery with sarcomere actin-myosin cross-bridge strain during eccentric muscle fatigue.',
+    factor: 'Primary lens: vagal reset · diaphragm excursion · fiber load',
+    studyId: 'breathing',
+    query: '',
+    secondaryId: 'sarcomere',
+    secondaryLabel: 'Sarcomere',
+  },
+];
+
+const lensDeckEl = document.getElementById('heart-lens-deck');
+const lensBpmEl = document.getElementById('lens-bpm-readout');
+const lensScopeLabelEl = document.getElementById('lens-scope-label');
+const lensAudioStateEl = document.getElementById('lens-scope-audio-state');
+const lensRecoveryEl = document.getElementById('lens-metric-recovery');
+const lensDriveEl = document.getElementById('lens-metric-drive');
+const lensDemandEl = document.getElementById('lens-metric-demand');
+const lensSummaryEl = document.getElementById('lens-state-summary');
+const lensBoomBtn = document.getElementById('lens-boom-btn');
+const lensPreviewBtn = document.getElementById('lens-preview-heart');
+const lensOpenLink = document.getElementById('lens-open-heart');
+const lensScopeFrameEl = document.getElementById('lens-scope-frame');
+const lensScopeAlertBarEl = document.getElementById('lens-scope-alert-bar');
+const lensScopeAlertBpmEl = document.getElementById('lens-scope-alert-bpm');
+const lensAvgBpmEl = document.getElementById('lens-avg-bpm-readout');
+const lensHrvEl = document.getElementById('lens-hrv-readout');
+const lensTrendStatusEl = document.getElementById('lens-trend-status');
+const lensChartHost = document.getElementById('lens-d3-chart');
+const tacticalGridEl = document.getElementById('tactical-grid');
+const lensProfileButtons = Array.from(document.querySelectorAll('[data-heart-profile]'));
+const lensFilterButtons = Array.from(document.querySelectorAll('[data-lens-filter]'));
+
+const tacticalTooltipEl = document.getElementById('tactical-tooltip');
+const tacticalTooltipLoad = document.getElementById('tactical-tooltip-load');
+const tacticalTooltipTitle = document.getElementById('tactical-tooltip-title');
+const tacticalTooltipClose = document.getElementById('tactical-tooltip-close');
+const tacticalTooltipMeterFill = document.getElementById('tactical-tooltip-meter-fill');
+const tacticalTooltipReadiness = document.getElementById('tactical-tooltip-readiness');
+const tacticalTooltipWindow = document.getElementById('tactical-tooltip-window');
+const tacticalTooltipRiskLabel = document.getElementById('tactical-tooltip-risk-label');
+const tacticalTooltipRiskValue = document.getElementById('tactical-tooltip-risk-value');
+const tacticalTooltipImpact = document.getElementById('tactical-tooltip-impact');
+const tacticalTooltipPrevention = document.getElementById('tactical-tooltip-prevention');
+const tacticalTooltipMeta = document.getElementById('tactical-tooltip-meta');
+
+const CRITICAL_BPM_THRESHOLD = 140;
+
+let activeHeartProfile = safeQuery.profile || 'sleep-debt';
+let activeLensFilter = safeQuery.lens || 'all';
+let lensAudio = null;
+let lensPlayingBoom = false;
+let scopeAlertShakeTimer = null;
+let scopeAlertBeatTimer = null;
+let wasCriticalThreshold = false;
+let activeTacticalCard = null;
+let activeTacticalFactorId = null;
+let tacticalTooltipPinned = false;
+let tacticalHideTimer = null;
+
+function syncTrendReadout(trend) {
+  if (!trend) return;
+  if (lensAvgBpmEl) {
+    lensAvgBpmEl.textContent = `${trend.trailingAvgBpm.toFixed(1)} BPM`;
+  }
+  if (lensHrvEl && Number.isFinite(trend.rmssdMs)) {
+    lensHrvEl.textContent = `${Math.round(trend.rmssdMs)} ms`;
+  }
+  if (lensTrendStatusEl) {
+    lensTrendStatusEl.textContent = trend.label;
+    lensTrendStatusEl.dataset.trend = trend.status;
+  }
+  if (lensScopeAlertBpmEl && wasCriticalThreshold) {
+    const cfg = LENS_HEART_PROFILES[activeHeartProfile];
+    const instant = cfg ? cfg.bpm : Math.round(trend.instantBpm);
+    lensScopeAlertBpmEl.textContent = `${instant} BPM · 30S AVG ${trend.trailingAvgBpm.toFixed(1)}`;
+  }
+}
+
+const rhythmChart = mountHeartRhythmChart({
+  container: lensChartHost,
+  initialProfile: activeHeartProfile,
+  isPaused: () => isIntroActive() || Boolean(dialogEl?.open),
+  onTrendUpdate: syncTrendReadout,
+});
+
+function positionTacticalTooltip(anchor) {
+  if (!tacticalTooltipEl || !anchor) return;
+  const rect = anchor.getBoundingClientRect();
+  const tipRect = tacticalTooltipEl.getBoundingClientRect();
+  const margin = 12;
+
+  let left = rect.left + rect.width / 2 - tipRect.width / 2;
+  left = Math.max(margin, Math.min(window.innerWidth - tipRect.width - margin, left));
+
+  let top = rect.top - tipRect.height - 10;
+  if (top < margin) {
+    top = rect.bottom + 10;
+  }
+  if (top + tipRect.height > window.innerHeight - margin) {
+    top = Math.max(margin, window.innerHeight - tipRect.height - margin);
+  }
+
+  tacticalTooltipEl.style.left = `${Math.round(left)}px`;
+  tacticalTooltipEl.style.top = `${Math.round(top)}px`;
+}
+
+function showTacticalTooltip(card, factorId, { pin = false } = {}) {
+  if (!tacticalTooltipEl || !card || isIntroActive() || dialogEl?.open) return;
+  const snapshot = getTacticalRecoverySnapshot(factorId, activeHeartProfile);
+  if (!snapshot) return;
+
+  if (typeof activeStatItem !== 'undefined' && activeStatItem) {
+    hideStatTooltip();
+  }
+
+  if (tacticalHideTimer !== null) {
+    clearTimeout(tacticalHideTimer);
+    tacticalHideTimer = null;
+  }
+
+  if (activeTacticalCard && activeTacticalCard !== card) {
+    activeTacticalCard.classList.remove('is-tooltip-open');
+    activeTacticalCard.removeAttribute('aria-describedby');
+    activeTacticalCard.querySelector('.tactical-intel-btn')?.setAttribute('aria-expanded', 'false');
+  }
+
+  activeTacticalCard = card;
+  activeTacticalFactorId = factorId;
+  tacticalTooltipPinned = pin;
+
+  card.classList.add('is-tooltip-open');
+  card.setAttribute('aria-describedby', 'tactical-tooltip');
+  card.querySelector('.tactical-intel-btn')?.setAttribute('aria-expanded', String(pin));
+
+  tacticalTooltipEl.dataset.tone = snapshot.tone;
+  tacticalTooltipEl.classList.toggle('is-pinned', pin);
+  if (tacticalTooltipClose) tacticalTooltipClose.hidden = !pin;
+
+  if (tacticalTooltipLoad) tacticalTooltipLoad.textContent = snapshot.loadLabel;
+  if (tacticalTooltipTitle) tacticalTooltipTitle.textContent = snapshot.title;
+  if (tacticalTooltipMeterFill) tacticalTooltipMeterFill.style.width = `${snapshot.readinessPct}%`;
+  if (tacticalTooltipReadiness) tacticalTooltipReadiness.textContent = `${snapshot.readinessPct}%`;
+  if (tacticalTooltipWindow) tacticalTooltipWindow.textContent = snapshot.recoveryWindow;
+  if (tacticalTooltipRiskLabel) tacticalTooltipRiskLabel.textContent = snapshot.riskLabel;
+  if (tacticalTooltipRiskValue) tacticalTooltipRiskValue.textContent = snapshot.riskValue;
+  if (tacticalTooltipImpact) tacticalTooltipImpact.textContent = snapshot.tacticalImpact;
+  if (tacticalTooltipPrevention) tacticalTooltipPrevention.textContent = snapshot.injuryPrevention;
+  if (tacticalTooltipMeta) tacticalTooltipMeta.textContent = snapshot.meta;
+
+  tacticalTooltipEl.hidden = false;
+  positionTacticalTooltip(card);
+  tacticalTooltipEl.classList.add('is-visible');
+}
+
+function hideTacticalTooltip({ anchor = null, force = false } = {}) {
+  if (!tacticalTooltipEl) return;
+  if (!force && tacticalTooltipPinned) return;
+  if (!force && anchor && activeTacticalCard && anchor !== activeTacticalCard) return;
+
+  if (activeTacticalCard) {
+    activeTacticalCard.classList.remove('is-tooltip-open');
+    activeTacticalCard.removeAttribute('aria-describedby');
+    activeTacticalCard.querySelector('.tactical-intel-btn')?.setAttribute('aria-expanded', 'false');
+    activeTacticalCard = null;
+  }
+  activeTacticalFactorId = null;
+  tacticalTooltipPinned = false;
+  tacticalTooltipEl.classList.remove('is-visible', 'is-pinned');
+  if (tacticalTooltipClose) tacticalTooltipClose.hidden = true;
+
+  if (tacticalHideTimer !== null) clearTimeout(tacticalHideTimer);
+  tacticalHideTimer = window.setTimeout(() => {
+    if (!activeTacticalCard) tacticalTooltipEl.hidden = true;
+  }, 160);
+}
+
+tacticalTooltipClose?.addEventListener('click', () => {
+  hideTacticalTooltip({ force: true });
+});
+
+document.addEventListener('pointerdown', (e) => {
+  if (!tacticalTooltipPinned || !tacticalTooltipEl) return;
+  const target = e.target;
+  if (!(target instanceof Element)) return;
+  if (
+    target.closest('#tactical-tooltip') ||
+    target.closest('.tactical-intel-btn') ||
+    target.closest('[data-heart-profile]')
+  ) {
+    return;
+  }
+  hideTacticalTooltip({ force: true });
+});
+
+function stopLensAudio() {
+  lensAudio?.stopSequence?.();
+  lensPlayingBoom = false;
+  if (lensBoomBtn) lensBoomBtn.textContent = 'Play Boom-Boom-Boom';
+  if (lensAudioStateEl) lensAudioStateEl.textContent = 'AUDIO READY';
+}
+
+function triggerScopeShake() {
+  if (!lensScopeFrameEl) return;
+  const reduced =
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced) return;
+
+  lensScopeFrameEl.classList.remove('is-alert-shake');
+  void lensScopeFrameEl.offsetWidth;
+  lensScopeFrameEl.classList.add('is-alert-shake');
+  if (scopeAlertShakeTimer !== null) clearTimeout(scopeAlertShakeTimer);
+  scopeAlertShakeTimer = window.setTimeout(() => {
+    lensScopeFrameEl.classList.remove('is-alert-shake');
+    scopeAlertShakeTimer = null;
+  }, 360);
+}
+
+function pulseScopeThresholdBeat() {
+  if (!lensScopeFrameEl || !wasCriticalThreshold) return;
+  lensScopeFrameEl.classList.add('is-alert-beat');
+  if (scopeAlertBeatTimer !== null) clearTimeout(scopeAlertBeatTimer);
+  scopeAlertBeatTimer = window.setTimeout(() => {
+    lensScopeFrameEl.classList.remove('is-alert-beat');
+    scopeAlertBeatTimer = null;
+  }, 240);
+  triggerScopeShake();
+}
+
+function updateScopeThresholdAlert(bpm, { allowShake = true } = {}) {
+  const isCritical = bpm > CRITICAL_BPM_THRESHOLD;
+  if (lensScopeFrameEl) {
+    lensScopeFrameEl.classList.toggle('is-critical', isCritical);
+    if (!isCritical) {
+      lensScopeFrameEl.classList.remove('is-alert-shake', 'is-alert-beat');
+    }
+  }
+  if (lensScopeAlertBarEl) {
+    lensScopeAlertBarEl.hidden = !isCritical;
+  }
+  if (lensScopeAlertBpmEl && isCritical) {
+    const trend = rhythmChart.getTrendState?.();
+    lensScopeAlertBpmEl.textContent = trend
+      ? `${bpm} BPM · 30S AVG ${trend.trailingAvgBpm.toFixed(1)}`
+      : `${bpm} BPM`;
+  }
+  if (isCritical && allowShake && !wasCriticalThreshold) {
+    triggerScopeShake();
+  }
+  wasCriticalThreshold = isCritical;
+}
+
+function applyHeartProfile(profileId, { allowShake = true } = {}) {
+  const cfg = LENS_HEART_PROFILES[profileId] || LENS_HEART_PROFILES['sleep-debt'];
+  activeHeartProfile = cfg.id;
+
+  if (lensDeckEl) lensDeckEl.dataset.profile = cfg.id;
+  if (lensBpmEl) lensBpmEl.textContent = `${cfg.bpm} BPM`;
+  if (lensScopeLabelEl) lensScopeLabelEl.textContent = cfg.scopeTag;
+  if (lensRecoveryEl) lensRecoveryEl.textContent = cfg.recovery;
+  if (lensDriveEl) lensDriveEl.textContent = cfg.drive;
+  if (lensDemandEl) lensDemandEl.textContent = cfg.demand;
+  if (lensSummaryEl) lensSummaryEl.textContent = cfg.summary;
+  if (lensOpenLink) lensOpenLink.href = `./heart/?profile=${cfg.id}`;
+  const sidebarHeartLink = document.getElementById('open-heart-link');
+  if (sidebarHeartLink) sidebarHeartLink.href = `./heart/?profile=${cfg.id}`;
+
+  for (const btn of lensProfileButtons) {
+    btn.setAttribute('aria-pressed', String(btn.dataset.heartProfile === cfg.id));
+  }
+  rhythmChart.setProfile(cfg.id);
+  updateScopeThresholdAlert(cfg.bpm, { allowShake });
+  lensAudio?.setStressIntensity?.(cfg.intensity);
+
+  const pinnedId = tacticalTooltipPinned ? activeTacticalFactorId : null;
+  renderTacticalCards();
+  if (pinnedId && tacticalGridEl) {
+    const matched = tacticalGridEl.querySelector(`.tactical-card[data-factor-id="${pinnedId}"]`);
+    if (matched) {
+      showTacticalTooltip(matched, pinnedId, { pin: true });
+    } else {
+      hideTacticalTooltip({ force: true });
+    }
+  }
+}
+
+for (const btn of lensProfileButtons) {
+  btn.addEventListener('click', () => {
+    const id = btn.dataset.heartProfile;
+    if (!id) return;
+    applyHeartProfile(id, { allowShake: true });
+    const cfg = LENS_HEART_PROFILES[id];
+    showShortcutToast(
+      cfg.bpm > CRITICAL_BPM_THRESHOLD
+        ? `Critical Stress Alert · ${cfg.bpm} BPM`
+        : `Heart Profile · ${cfg.label}`
+    );
+  });
+}
+
+lensBoomBtn?.addEventListener('click', () => {
+  const cfg = LENS_HEART_PROFILES[activeHeartProfile] || LENS_HEART_PROFILES['sleep-debt'];
+  if (!lensAudio) {
+    lensAudio = createHeartbeatAudio();
+  }
+  lensPlayingBoom = true;
+  if (lensBoomBtn) lensBoomBtn.textContent = 'Boom-Boom-Boom Active…';
+  if (lensAudioStateEl) lensAudioStateEl.textContent = `SURGE · ${cfg.bpm} BPM`;
+
+  lensAudio.playBoomSequence({
+    beats: 3,
+    bpm: cfg.bpm,
+    intensity: cfg.intensity,
+    boost: true,
+    onBeat: (_idx, kind) => {
+      rhythmChart.triggerBeat(kind);
+      if (kind === 'lub' && cfg.bpm > CRITICAL_BPM_THRESHOLD) {
+        pulseScopeThresholdBeat();
+      }
+    },
+    onDone: () => {
+      lensPlayingBoom = false;
+      if (lensBoomBtn) lensBoomBtn.textContent = 'Play Boom-Boom-Boom';
+      if (lensAudioStateEl) lensAudioStateEl.textContent = 'AUDIO READY';
+    },
+  });
+});
+
+lensPreviewBtn?.addEventListener('click', () => {
+  const heartEntry = STUDIES.find((item) => item.id === 'heart');
+  if (!heartEntry) return;
+  openStudyModal(heartEntry, { query: `profile=${activeHeartProfile}` });
+});
+
+function renderTacticalCards() {
+  if (!tacticalGridEl) return;
+  if (!tacticalTooltipPinned) {
+    hideTacticalTooltip({ force: true });
+  }
+  const visible = TACTICAL_FACTORS.filter(
+    (item) => activeLensFilter === 'all' || item.category === activeLensFilter
+  );
+  tacticalGridEl.textContent = '';
+
+  for (const item of visible) {
+    const study = STUDIES.find((s) => s.id === item.studyId);
+    const secondary = item.secondaryId ? STUDIES.find((s) => s.id === item.secondaryId) : null;
+    const snapshot = getTacticalRecoverySnapshot(item.id, activeHeartProfile);
+    const card = document.createElement('article');
+    card.className = 'tactical-card';
+    card.dataset.factorId = item.id;
+
+    const top = document.createElement('div');
+    const head = document.createElement('div');
+    head.className = 'tactical-card-head';
+
+    const kicker = document.createElement('span');
+    kicker.className = 'label';
+    kicker.textContent = item.kicker;
+
+    const intelBtn = document.createElement('button');
+    intelBtn.type = 'button';
+    intelBtn.className = 'tactical-intel-btn';
+    intelBtn.setAttribute('aria-expanded', 'false');
+    intelBtn.setAttribute('aria-label', `Inspect recovery and injury prevention intel for ${item.title}`);
+    intelBtn.textContent = snapshot ? `Intel · ${snapshot.readinessPct}%` : 'Intel ?';
+
+    intelBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (tacticalTooltipPinned && activeTacticalFactorId === item.id) {
+        hideTacticalTooltip({ force: true });
+      } else {
+        showTacticalTooltip(card, item.id, { pin: true });
+      }
+    });
+    intelBtn.addEventListener('focus', () => {
+      if (!tacticalTooltipPinned) {
+        showTacticalTooltip(card, item.id, { pin: false });
+      }
+    });
+    intelBtn.addEventListener('blur', () => {
+      if (!tacticalTooltipPinned) {
+        hideTacticalTooltip({ anchor: card });
+      }
+    });
+
+    head.append(kicker, intelBtn);
+
+    const title = document.createElement('h4');
+    title.className = 'tactical-card-title';
+    title.textContent = item.title;
+
+    const desc = document.createElement('p');
+    desc.className = 'tactical-card-desc';
+    desc.textContent = item.description;
+
+    const factor = document.createElement('p');
+    factor.className = 'tactical-card-factor';
+    factor.textContent = item.factor;
+
+    top.append(head, title, desc, factor);
+
+    const actions = document.createElement('div');
+    actions.className = 'tactical-card-actions';
+
+    if (study) {
+      const preview = document.createElement('button');
+      preview.type = 'button';
+      preview.className = 'btn btn-primary';
+      preview.textContent = 'Preview 3D';
+      preview.addEventListener('click', () => {
+        const q = item.studyId === 'heart' ? `profile=${activeHeartProfile}` : item.query;
+        openStudyModal(study, { query: q });
+      });
+
+      const openLink = document.createElement('a');
+      openLink.className = 'btn';
+      openLink.href = item.studyId === 'heart'
+        ? `./heart/?profile=${activeHeartProfile}`
+        : `./${item.studyId}/`;
+      openLink.textContent = 'Open Study';
+      actions.append(preview, openLink);
+    }
+
+    if (secondary) {
+      const secBtn = document.createElement('button');
+      secBtn.type = 'button';
+      secBtn.className = 'btn';
+      secBtn.textContent = item.secondaryLabel;
+      secBtn.addEventListener('click', () => openStudyModal(secondary));
+      actions.append(secBtn);
+    }
+
+    card.addEventListener('mouseenter', () => {
+      if (!tacticalTooltipPinned) {
+        showTacticalTooltip(card, item.id, { pin: false });
+      }
+    });
+    card.addEventListener('mouseleave', () => {
+      if (!tacticalTooltipPinned) {
+        hideTacticalTooltip({ anchor: card });
+      }
+    });
+
+    card.append(top, actions);
+    tacticalGridEl.append(card);
+  }
+}
+
+for (const btn of lensFilterButtons) {
+  btn.addEventListener('click', () => {
+    activeLensFilter = btn.dataset.lensFilter || 'all';
+    for (const b of lensFilterButtons) {
+      b.setAttribute('aria-pressed', String(b.dataset.lensFilter === activeLensFilter));
+    }
+    hideTacticalTooltip({ force: true });
+    renderTacticalCards();
+  });
+}
+
+for (const b of lensFilterButtons) {
+  b.setAttribute('aria-pressed', String(b.dataset.lensFilter === activeLensFilter));
+}
+applyHeartProfile(activeHeartProfile, { allowShake: false });
+
+if (safeQuery.skipIntro && introContainer) {
   introContainer.hidden = true;
   document.body.classList.remove('intro-locked');
 } else {
   launchHeartIntro();
 }
 
-for (const btn of document.querySelectorAll('[data-replay-heart]')) {
-  btn.addEventListener('click', () => launchHeartIntro({ scrollTop: true }));
-}
+window.addEventListener('pagehide', () => {
+  if (scopeAlertShakeTimer !== null) clearTimeout(scopeAlertShakeTimer);
+  if (scopeAlertBeatTimer !== null) clearTimeout(scopeAlertBeatTimer);
+  rhythmChart.destroy();
+  lensAudio?.dispose?.();
+  lensAudio = null;
+});
 
 // Global Keyboard Shortcuts (guarded against inputs, modifiers, intro, and active study modal)
 function isTypingElement(target) {
@@ -481,6 +1073,10 @@ function showStatTooltip(anchor) {
   const data = key ? STAT_TOOLTIPS[key] : null;
   if (!data) return;
 
+  if (activeTacticalCard) {
+    hideTacticalTooltip({ force: true });
+  }
+
   if (statHideTimer !== null) {
     clearTimeout(statHideTimer);
     statHideTimer = null;
@@ -533,9 +1129,11 @@ for (const item of statItems) {
 
 mainViewport?.addEventListener('scroll', () => {
   if (activeStatItem) hideStatTooltip();
+  if (activeTacticalCard) hideTacticalTooltip({ force: true });
 }, { passive: true });
 window.addEventListener('resize', () => {
   if (activeStatItem) positionStatTooltip(activeStatItem);
+  if (activeTacticalCard) positionTacticalTooltip(activeTacticalCard);
 });
 
 window.addEventListener('keydown', (e) => {
@@ -545,6 +1143,9 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (activeStatItem) {
       hideStatTooltip();
+    }
+    if (activeTacticalCard) {
+      hideTacticalTooltip({ force: true });
     }
     if (shortcutsDialog?.open) {
       e.preventDefault();
@@ -577,6 +1178,11 @@ window.addEventListener('keydown', (e) => {
       e.preventDefault();
       scrollToSection('top', { announce: true });
       break;
+    case 'l':
+    case 'L':
+      e.preventDefault();
+      scrollToSection('tactical-lens', { announce: true });
+      break;
     case '1':
       e.preventDefault();
       scrollToSection('studies', { announce: true });
@@ -602,15 +1208,15 @@ window.addEventListener('keydown', (e) => {
     case 'h':
       e.preventDefault();
       showShortcutToast('Opening The Living Heart…');
-      window.location.assign('./heart/');
+      window.location.assign(`./heart/?profile=${activeHeartProfile}`);
       break;
     case 'H':
       e.preventDefault();
       if (heartStudy) {
-        openStudyModal(heartStudy);
+        openStudyModal(heartStudy, { query: `profile=${activeHeartProfile}` });
         showShortcutToast('Preview · The Living Heart');
       } else {
-        window.location.assign('./heart/');
+        window.location.assign(`./heart/?profile=${activeHeartProfile}`);
       }
       break;
     case 'r':
