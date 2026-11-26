@@ -8,6 +8,7 @@
   <meta property="og:title" content="3Dviz Pro Max — Interactive 3D Studies &amp; Visualization Skill">
   <meta property="og:description" content="Turn an idea into a 3D scene worth exploring. 37 runnable Three.js studies across anatomy, mathematics, physics, crafted worlds, and lighting.">
   <meta property="og:type" content="website">
+  <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap">
@@ -151,7 +152,7 @@
             </div>
 
             <p class="lens-deck-copy">
-              Switch directly between physiological load states to feel how prolonged stress and days without sleep compress cardiac recovery — synced to live boom-boom-boom audio and the 3D Living Heart.
+              Switch between developer load states or tap <kbd class="kbd-hint">B</kbd> for an instant, zero-latency boom-boom pulse — showcasing real-time Web Audio synthesis, stochastic D3 telemetry, and 3D WebGL anatomy working in lockstep.
             </p>
 
             <div class="lens-profile-tabs" id="lens-profile-tabs" role="group" aria-label="Physiological load state">
@@ -213,6 +214,10 @@
             <div class="lens-deck-actions">
               <button type="button" class="btn btn-primary" id="lens-boom-btn">
                 Play Boom-Boom-Boom
+              </button>
+              <button type="button" class="btn btn-shortcut" id="lens-tap-beat-btn" title="Fire an instant low-latency boom-boom heartbeat (B)">
+                <span>Tap Beat</span>
+                <kbd class="kbd-hint">B</kbd>
               </button>
               <button type="button" class="btn" id="lens-preview-heart">
                 Preview 3D Heart
@@ -496,6 +501,7 @@
       <div class="shortcuts-group">
         <span class="label">The Living Heart &amp; Controls</span>
         <ul class="shortcuts-list">
+          <li><span>Tap live boom-boom heartbeat</span><kbd>B</kbd></li>
           <li><span>Open The Living Heart study</span><kbd>H</kbd></li>
           <li><span>Preview The Living Heart modal</span><span class="shortcut-keys"><kbd>Shift</kbd> + <kbd>H</kbd></span></li>
           <li><span>Replay beating heart intro</span><kbd>R</kbd></li>

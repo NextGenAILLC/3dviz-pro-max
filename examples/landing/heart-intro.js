@@ -46,8 +46,8 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const HOLD_DURATION_MS = prefersReducedMotion ? 1100 : 3200;
-  const DISSOLVE_DURATION_MS = prefersReducedMotion ? 320 : 900;
+  const HOLD_DURATION_MS = prefersReducedMotion ? 850 : 2100;
+  const DISSOLVE_DURATION_MS = prefersReducedMotion ? 220 : 520;
 
   // Build intro DOM fresh inside container
   container.hidden = false;
@@ -288,7 +288,7 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
       safetyTimer = null;
     }
 
-    heartbeatAudio.fadeOut(DISSOLVE_DURATION_MS / 1000);
+    heartbeatAudio.fadeOut(Math.min(0.34, (DISSOLVE_DURATION_MS / 1000) * 0.72));
 
     if (statusEl) {
       statusEl.textContent = 'Opening 3Dviz Pro Max…';
@@ -432,10 +432,10 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
         if (crossedPhase(prevPhase, audioCyclePhase, 0.17)) lubGlow = 1;
         if (crossedPhase(prevPhase, audioCyclePhase, 0.48)) dubGlow = 0.72;
 
-        // Scripted ~1.15s peak boom-boom surge right on the hero middle beat before dissolving
-        if (!scriptedBoostFired && !prefersReducedMotion && elapsed >= 680) {
+        // Scripted peak boom-boom surge early on the hero beat before dissolving cleanly
+        if (!scriptedBoostFired && !prefersReducedMotion && elapsed >= 320) {
           scriptedBoostFired = true;
-          heartbeatAudio.triggerBoost(1.15);
+          heartbeatAudio.triggerBoost(0.95);
           boostGlow = 1;
         }
 
@@ -462,13 +462,9 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
         const eased = easeInOutCubic(dProgress);
         const remaining = 1 - eased;
 
-        const fadeStep = prefersReducedMotion ? 0 : dt * 0.8;
+        const fadeStep = prefersReducedMotion ? 0 : dt * 0.75;
         heartResult.update(fadeStep);
-        const prevPhase = audioCyclePhase;
-        audioCyclePhase = (audioCyclePhase + fadeStep) % 1;
-        if (crossedPhase(prevPhase, audioCyclePhase, 0.17)) lubGlow = 1;
-        if (crossedPhase(prevPhase, audioCyclePhase, 0.48)) dubGlow = 0.72;
-        heartbeatAudio.syncPhase(audioCyclePhase);
+        // Never fire new oscillators during dissolve so fade-out finishes with zero aftermath
         updateGlow(dt, remaining);
 
         // Dissolve 3D heart opacity & gently expand/recede as landing page emerges

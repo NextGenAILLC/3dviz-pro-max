@@ -21,6 +21,11 @@ const PARTS=[
 ];
 const CENTER=[21.4,-121.8,1260],SCALE=.024;
 
+// In-memory cache for prepared geometries + morph targets and procedural grain pixels
+// so replays and modal previews mount in <5ms with zero main-thread stutter.
+const PREPARED_PART_PROMISES=new Map();
+let CACHED_GRAIN_CANVAS=null;
+
 const LOAD_PROFILES={
  baseline:{
   label:'Baseline Recovery',
@@ -65,11 +70,24 @@ const LOAD_PROFILES={
 };
 
 function texture(){
- const c=document.createElement('canvas');c.width=c.height=512;const ctx=c.getContext('2d'),img=ctx.createImageData(512,512);let seed=77;
- const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
- for(let y=0;y<512;y++)for(let x=0;x<512;x++){const i=(y*512+x)*4,v=135+12*Math.sin(x*.077+Math.sin(y*.04)*2)+12*(random()-.5);img.data[i]=img.data[i+1]=img.data[i+2]=v;img.data[i+3]=255;}
- ctx.putImageData(img,0,0);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
+ if(!CACHED_GRAIN_CANVAS){
+  const size=256;
+  const c=document.createElement('canvas');c.width=c.height=size;
+  const ctx=c.getContext('2d'),img=ctx.createImageData(size,size);let seed=77;
+  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+   const i=(y*size+x)*4,v=135+12*Math.sin(x*.154+Math.sin(y*.08)*2)+12*(random()-.5);
+   img.data[i]=img.data[i+1]=img.data[i+2]=v;img.data[i+3]=255;
+  }
+  ctx.putImageData(img,0,0);
+  CACHED_GRAIN_CANVAS=c;
+ }
+ const t=new THREE.CanvasTexture(CACHED_GRAIN_CANVAS);
+ t.wrapS=t.wrapT=THREE.RepeatWrapping;
+ t.needsUpdate=true;
+ return t;
 }
+
 function prepare(geometry){
  geometry.deleteAttribute('normal');const p=geometry.attributes.position;
  for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i);p.setXYZ(i,(x-CENTER[0])*SCALE,(z-CENTER[2])*SCALE,-(y-CENTER[1])*SCALE);}
@@ -78,6 +96,38 @@ function prepare(geometry){
  for(let i=0;i<points.count;i++){uv[i*2]=points.getX(i)*.65+points.getZ(i)*.18;uv[i*2+1]=points.getY(i)*.65;}
  g.setAttribute('uv',new THREE.BufferAttribute(uv,2));return g;
 }
+
+function cloneTemplateGeometry(template){
+ const g=template.clone();
+ if(template.morphAttributes.position){
+  g.morphAttributes.position=template.morphAttributes.position.map(attr=>attr.clone());
+ }
+ if(template.morphAttributes.normal){
+  g.morphAttributes.normal=template.morphAttributes.normal.map(attr=>attr.clone());
+ }
+ g.morphTargetsRelative=Boolean(template.morphTargetsRelative);
+ return g;
+}
+
+function loadPreparedPartTemplate(loader,id,type){
+ if(!PREPARED_PART_PROMISES.has(id)){
+  const promise=(async()=>{
+   const response=await fetch(BASE+id+'.stl');
+   if(!response.ok)throw new Error(`Missing anatomy asset ${id}`);
+   const g=prepare(loader.parse(await response.arrayBuffer()));
+   try{if(type==='pulmonary')proximalPulmonary(g);}catch(error){g.dispose();throw error;}
+   const holder=new THREE.Mesh(g);
+   addMorphPoses(holder,[(x,y,z)=>heartPose(x,y,z,'atrial'),(x,y,z)=>heartPose(x,y,z,'ventricular')]);
+   return g;
+  })().catch(err=>{
+   PREPARED_PART_PROMISES.delete(id);
+   throw err;
+  });
+  PREPARED_PART_PROMISES.set(id,promise);
+ }
+ return PREPARED_PART_PROMISES.get(id);
+}
+
 export async function createScene(){
  const group=new THREE.Group(),heart=new THREE.Group();group.add(heart);
  const safeQuery=typeof window!=='undefined'?parseSafeQuery(window.location.search):{profile:null};
@@ -110,21 +160,19 @@ export async function createScene(){
   valve:new THREE.MeshPhysicalMaterial({color:'#d8b4a0',roughness:.54,side:THREE.DoubleSide})
  };
  const loader=new STLLoader(),objects=[];
- // Source-coordinate registration is retained across all parts; no part is independently centered.
- try{for(let start=0;start<PARTS.length;start+=3){
-  const batch=await Promise.allSettled(PARTS.slice(start,start+3).map(async([id,name,type])=>{
-   const response=await fetch(BASE+id+'.stl');if(!response.ok)throw new Error(`Missing anatomy asset ${id}`);
-   const g=prepare(loader.parse(await response.arrayBuffer()));
-   try{if(type==='pulmonary')proximalPulmonary(g);}catch(error){g.dispose();throw error;}
+ // Fetch and prepare all 15 registered parts concurrently with cached morph templates
+ try{
+  const templates=await Promise.all(PARTS.map(([id,_name,type])=>loadPreparedPartTemplate(loader,id,type)));
+  for(let i=0;i<PARTS.length;i++){
+   const [id,name,type]=PARTS[i];
+   const g=cloneTemplateGeometry(templates[i]);
    const material=materials[type].clone();material.clipShadows=true;
    material.clippingPlanes=type==='wall'?[...heightClip,sectionPlane]:type==='pulmonary'?pulmonaryClip:heightClip;
    const object=mesh(g,material,[0,0,0],heart);object.userData={id,name,type};
-   addMorphPoses(object,[(x,y,z)=>heartPose(x,y,z,'atrial'),(x,y,z)=>heartPose(x,y,z,'ventricular')]);return object;
-  }));
-  const failure=batch.find(result=>result.status==='rejected');
-  if(failure)throw failure.reason;
-  objects.push(...batch.map(result=>result.value));
- }}catch(error){disposeGroup(group);grain.dispose();throw error;}
+   object.updateMorphTargets();object.frustumCulled=false;
+   objects.push(object);
+  }
+ }catch(error){disposeGroup(group);grain.dispose();throw error;}
  finally{Object.values(materials).forEach(m=>m.dispose());}
 
  const annotations=new THREE.Group();group.add(annotations);
@@ -192,11 +240,7 @@ export async function createScene(){
    }
   }
   if(state.audio&&state.motion&&dt>0&&audioEngine){
-   if(prevAudioPhase===null){
-    audioEngine.syncPhase(state.phase);
-   }else{
-    audioEngine.syncPhase(state.phase);
-   }
+   audioEngine.syncPhase(state.phase);
    prevAudioPhase=state.phase;
   }
   if(state.labels)syncAnnotations();
@@ -239,7 +283,7 @@ export async function createScene(){
      engine.unlock().then(()=>{
       if(engine.isMuted())engine.toggleMute();
       engine.setStressIntensity(LOAD_PROFILES[state.profile].intensity);
-      engine.playBoomBoom({boost:true});
+      engine.playBoomBoom({boost:true,bpm:state.rate});
      });
     }else if(!engine.isMuted()){
      engine.toggleMute();

@@ -72,14 +72,15 @@ const PROFILE_SHAPES = {
  */
 function sampleHeartbeat(u, shape, spikeBoost = 0, beatRipple = 0, hrv = null) {
   const x = u - Math.floor(u);
-  const sharpen = spikeBoost > 0.05 ? shape.audioSharpen : 1;
+  const clampedBoost = Math.max(0, Math.min(1, spikeBoost));
+  const sharpen = 1 - (1 - shape.audioSharpen) * clampedBoost;
   const rAmpScale = hrv ? hrv.rAmpScale : 1;
   const tAmpScale = hrv ? hrv.tAmpScale : 1;
   const shift = hrv ? hrv.rShift : 0;
   const micro = hrv ? hrv.baselineMicro : 0;
 
   const rW = shape.rWidth * sharpen;
-  const rH = (shape.rAmp + spikeBoost * shape.audioBoostGain) * rAmpScale;
+  const rH = (shape.rAmp + clampedBoost * shape.audioBoostGain) * rAmpScale;
 
   const p = 0.13 * Math.exp(-Math.pow((x - (0.14 + shift * 0.5)) / 0.036, 2));
   const q = -(shape.qDepth + spikeBoost * 0.1) * Math.exp(-Math.pow((x - (0.255 + shift)) / (0.013 * sharpen), 2));
@@ -119,6 +120,7 @@ export function mountHeartRhythmChart({
   let activeProfile = PROFILE_SHAPES[initialProfile] ? initialProfile : 'sleep-debt';
   let shape = PROFILE_SHAPES[activeProfile];
   let disposed = false;
+  let isOffscreen = false;
   let rafId = null;
   let lastTs = 0;
   let lastTrendEmitTs = 0;
@@ -699,20 +701,23 @@ export function mountHeartRhythmChart({
       high: trendState.trailingAvgBpm + hrv.bandSpreadBpm + hrv.bpmDelta * 0.22,
     });
 
-    activeAudioBoost *= 0.965;
-    dubEchoBoost *= 0.93;
-    // ~1.3s exponential decay so boom-boom bursts remain transient against the 30s trailing mean
-    transientSurgeBpm *= 0.986;
-    if (transientSurgeBpm < 0.05) transientSurgeBpm = 0;
+    activeAudioBoost *= 0.9;
+    if (activeAudioBoost < 0.01) activeAudioBoost = 0;
+    dubEchoBoost *= 0.87;
+    if (dubEchoBoost < 0.01) dubEchoBoost = 0;
+    // Fast, clean exponential decay so boom-boom bursts settle immediately with zero lingering aftermath
+    transientSurgeBpm *= 0.92;
+    if (transientSurgeBpm < 0.15) transientSurgeBpm = 0;
   }
 
   function tick(ts) {
     if (disposed) return;
-    const dt = lastTs ? Math.min((ts - lastTs) / 1000, 0.08) : 0;
+    const dt = lastTs ? Math.min((ts - lastTs) / 1000, 0.05) : 0;
     lastTs = ts;
 
-    if (!isPaused()) {
-      headGlow *= Math.exp(-dt * 4.8);
+    if (!isPaused() && !isOffscreen && !document.hidden) {
+      headGlow *= Math.exp(-dt * 5.6);
+      if (headGlow < 0.005) headGlow = 0;
       accumulator += dt;
       const stepDt = 1 / SAMPLE_RATE_HZ;
       let stepped = false;
@@ -725,6 +730,8 @@ export function mountHeartRhythmChart({
         renderPaths();
         if (stepped) emitTrend(false, ts);
       }
+    } else {
+      accumulator = 0;
     }
 
     rafId = requestAnimationFrame(tick);
@@ -746,6 +753,23 @@ export function mountHeartRhythmChart({
     resizeObserver.observe(container);
   } else {
     window.addEventListener('resize', handleResize);
+  }
+
+  let intersectionObserver = null;
+  if (typeof IntersectionObserver !== 'undefined') {
+    intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry) {
+          isOffscreen = !entry.isIntersecting;
+          if (!isOffscreen) {
+            lastTs = 0;
+          }
+        }
+      },
+      { threshold: 0.01 }
+    );
+    intersectionObserver.observe(container);
   }
 
   renderGrid();
@@ -798,6 +822,7 @@ export function mountHeartRhythmChart({
         rafId = null;
       }
       resizeObserver?.disconnect();
+      intersectionObserver?.disconnect();
       window.removeEventListener('resize', handleResize);
       root.selectAll('*').remove();
     },

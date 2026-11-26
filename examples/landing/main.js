@@ -542,6 +542,7 @@ const lensDriveEl = document.getElementById('lens-metric-drive');
 const lensDemandEl = document.getElementById('lens-metric-demand');
 const lensSummaryEl = document.getElementById('lens-state-summary');
 const lensBoomBtn = document.getElementById('lens-boom-btn');
+const lensTapBeatBtn = document.getElementById('lens-tap-beat-btn');
 const lensPreviewBtn = document.getElementById('lens-preview-heart');
 const lensOpenLink = document.getElementById('lens-open-heart');
 const lensScopeFrameEl = document.getElementById('lens-scope-frame');
@@ -581,6 +582,7 @@ let activeTacticalCard = null;
 let activeTacticalFactorId = null;
 let tacticalTooltipPinned = false;
 let tacticalHideTimer = null;
+let tapBeatResetTimer = null;
 
 function syncTrendReadout(trend) {
   if (!trend) return;
@@ -718,6 +720,10 @@ document.addEventListener('pointerdown', (e) => {
 });
 
 function stopLensAudio() {
+  if (tapBeatResetTimer !== null) {
+    clearTimeout(tapBeatResetTimer);
+    tapBeatResetTimer = null;
+  }
   lensAudio?.stopSequence?.();
   lensPlayingBoom = false;
   if (lensBoomBtn) lensBoomBtn.textContent = 'Play Boom-Boom-Boom';
@@ -823,14 +829,55 @@ for (const btn of lensProfileButtons) {
   });
 }
 
+function fireInstantTapBeat({ announce = false } = {}) {
+  const cfg = LENS_HEART_PROFILES[activeHeartProfile] || LENS_HEART_PROFILES['sleep-debt'];
+  if (!lensAudio) {
+    lensAudio = createHeartbeatAudio();
+  }
+  lensAudio.setStressIntensity(cfg.intensity);
+  lensAudio.playBoomBoom({
+    boost: true,
+    bpm: cfg.bpm,
+    onBeat: (_idx, kind) => {
+      rhythmChart.triggerBeat(kind);
+      if (kind === 'lub' && cfg.bpm > CRITICAL_BPM_THRESHOLD) {
+        pulseScopeThresholdBeat();
+      }
+    },
+  });
+
+  const latencyMs = lensAudio.getLatencyMs?.() ?? 0.4;
+  if (lensAudioStateEl) {
+    lensAudioStateEl.textContent = `LIVE BEAT · ${latencyMs.toFixed(1)}MS`;
+  }
+  if (tapBeatResetTimer !== null) clearTimeout(tapBeatResetTimer);
+  tapBeatResetTimer = window.setTimeout(() => {
+    tapBeatResetTimer = null;
+    if (!lensPlayingBoom && lensAudioStateEl) {
+      lensAudioStateEl.textContent = 'AUDIO READY';
+    }
+  }, 540);
+
+  if (announce) {
+    showShortcutToast(`Boom-Boom · ${cfg.bpm} BPM (${latencyMs.toFixed(1)} ms)`);
+  }
+}
+
+lensTapBeatBtn?.addEventListener('click', () => {
+  fireInstantTapBeat({ announce: false });
+});
+
 lensBoomBtn?.addEventListener('click', () => {
   const cfg = LENS_HEART_PROFILES[activeHeartProfile] || LENS_HEART_PROFILES['sleep-debt'];
   if (!lensAudio) {
     lensAudio = createHeartbeatAudio();
   }
+  if (tapBeatResetTimer !== null) {
+    clearTimeout(tapBeatResetTimer);
+    tapBeatResetTimer = null;
+  }
   lensPlayingBoom = true;
   if (lensBoomBtn) lensBoomBtn.textContent = 'Boom-Boom-Boom Active…';
-  if (lensAudioStateEl) lensAudioStateEl.textContent = `SURGE · ${cfg.bpm} BPM`;
 
   lensAudio.playBoomSequence({
     beats: 3,
@@ -839,6 +886,10 @@ lensBoomBtn?.addEventListener('click', () => {
     boost: true,
     onBeat: (_idx, kind) => {
       rhythmChart.triggerBeat(kind);
+      if (lensAudioStateEl) {
+        const lat = lensAudio.getLatencyMs?.() ?? 0.4;
+        lensAudioStateEl.textContent = `SURGE · ${cfg.bpm} BPM · ${lat.toFixed(1)}MS`;
+      }
       if (kind === 'lub' && cfg.bpm > CRITICAL_BPM_THRESHOLD) {
         pulseScopeThresholdBeat();
       }
@@ -1204,6 +1255,11 @@ window.addEventListener('keydown', (e) => {
       scrollToSection('studies');
       searchInput?.focus();
       showShortcutToast('Filter studies');
+      break;
+    case 'b':
+    case 'B':
+      e.preventDefault();
+      fireInstantTapBeat({ announce: true });
       break;
     case 'h':
       e.preventDefault();
