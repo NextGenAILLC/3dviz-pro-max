@@ -561,10 +561,12 @@ function renderHumanitarianDashboard() {
     return;
   }
 
-  for (const project of matches) {
+  for (let i = 0; i < matches.length; i++) {
+    const project = matches[i];
     const card = document.createElement('article');
     card.className = 'hum-card';
     card.dataset.priority = project.priority;
+    card.style.setProperty('--hum-enter-delay', `${Math.min(i, 7) * 32}ms`);
 
     // Header row: Sector + Region on left, text-first urgency label on right
     const head = document.createElement('div');
