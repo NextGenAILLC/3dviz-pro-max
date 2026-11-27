@@ -2,6 +2,13 @@ import { artScience, breadth } from '../shared/catalog.js';
 import { parseSafeQuery, redactPhi } from '../shared/phi-guard.js';
 import { mountHeartIntro } from './heart-intro.js';
 import { createHeartbeatAudio } from './heartbeat-audio.js';
+import {
+  getGlobalPulseSnapshot,
+  nudgeGlobalPulseVolume,
+  setGlobalPulseVolume,
+  subscribeGlobalPulseVolume,
+  toggleGlobalPulseMute,
+} from '../shared/audio-volume-store.js';
 import { mountHeartRhythmChart } from './heart-rhythm-chart.js';
 import { getTacticalRecoverySnapshot } from './tactical-recovery.js';
 
@@ -556,6 +563,13 @@ const tacticalGridEl = document.getElementById('tactical-grid');
 const lensProfileButtons = Array.from(document.querySelectorAll('[data-heart-profile]'));
 const lensFilterButtons = Array.from(document.querySelectorAll('[data-lens-filter]'));
 
+const globalAudioDockEl = document.getElementById('global-audio-dock');
+const globalVolumeSlider = document.getElementById('global-volume-slider');
+const globalVolumeReadout = document.getElementById('global-volume-readout');
+const globalVolumeMuteBtn = document.getElementById('global-volume-mute');
+const globalVolumeTestBtn = document.getElementById('global-volume-test');
+const globalPulseBlinkEl = document.getElementById('global-pulse-blink');
+
 const tacticalTooltipEl = document.getElementById('tactical-tooltip');
 const tacticalTooltipLoad = document.getElementById('tactical-tooltip-load');
 const tacticalTooltipTitle = document.getElementById('tactical-tooltip-title');
@@ -583,6 +597,63 @@ let activeTacticalFactorId = null;
 let tacticalTooltipPinned = false;
 let tacticalHideTimer = null;
 let tapBeatResetTimer = null;
+let pulseBlinkTimer = null;
+
+function formatReadyAudioLabel(snap = getGlobalPulseSnapshot()) {
+  return snap.muted ? 'MUTED · 0%' : `AUDIO READY · ${snap.percent}%`;
+}
+
+function blinkGlobalPulse(kind = 'lub') {
+  if (!globalPulseBlinkEl) return;
+  globalPulseBlinkEl.classList.remove('is-blink-lub', 'is-blink-dub');
+  void globalPulseBlinkEl.offsetWidth;
+  globalPulseBlinkEl.classList.add(kind === 'dub' ? 'is-blink-dub' : 'is-blink-lub');
+  if (pulseBlinkTimer !== null) clearTimeout(pulseBlinkTimer);
+  pulseBlinkTimer = window.setTimeout(() => {
+    globalPulseBlinkEl.classList.remove('is-blink-lub', 'is-blink-dub');
+    pulseBlinkTimer = null;
+  }, 145);
+}
+
+function syncGlobalVolumeUi(snap = getGlobalPulseSnapshot()) {
+  if (globalVolumeSlider) {
+    globalVolumeSlider.value = String(snap.percent);
+    globalVolumeSlider.style.setProperty('--vol-pct', `${snap.percent}%`);
+  }
+  if (globalVolumeReadout) {
+    globalVolumeReadout.textContent = snap.muted ? 'MUTE' : `${snap.percent}%`;
+  }
+  if (globalVolumeMuteBtn) {
+    globalVolumeMuteBtn.setAttribute('aria-pressed', String(snap.muted));
+    globalVolumeMuteBtn.setAttribute(
+      'aria-label',
+      snap.muted ? 'Restore boom-boom pulse audio' : 'Mute boom-boom pulse audio'
+    );
+  }
+  if (globalAudioDockEl) {
+    globalAudioDockEl.classList.toggle('is-muted', snap.muted);
+  }
+  if (lensAudioStateEl && !lensPlayingBoom && tapBeatResetTimer === null) {
+    lensAudioStateEl.textContent = formatReadyAudioLabel(snap);
+  }
+}
+
+const unsubGlobalVolume = subscribeGlobalPulseVolume(syncGlobalVolumeUi);
+syncGlobalVolumeUi();
+
+globalVolumeSlider?.addEventListener('input', () => {
+  const pct = Number(globalVolumeSlider.value) || 0;
+  setGlobalPulseVolume(pct / 100);
+});
+
+globalVolumeMuteBtn?.addEventListener('click', () => {
+  const snap = toggleGlobalPulseMute();
+  showShortcutToast(snap.muted ? 'Pulse Audio Muted' : `Pulse Volume · ${snap.percent}%`);
+});
+
+globalVolumeTestBtn?.addEventListener('click', () => {
+  fireInstantTapBeat({ announce: false });
+});
 
 function syncTrendReadout(trend) {
   if (!trend) return;
@@ -727,7 +798,7 @@ function stopLensAudio() {
   lensAudio?.stopSequence?.();
   lensPlayingBoom = false;
   if (lensBoomBtn) lensBoomBtn.textContent = 'Play Boom-Boom-Boom';
-  if (lensAudioStateEl) lensAudioStateEl.textContent = 'AUDIO READY';
+  if (lensAudioStateEl) lensAudioStateEl.textContent = formatReadyAudioLabel();
 }
 
 function triggerScopeShake() {
@@ -831,6 +902,7 @@ for (const btn of lensProfileButtons) {
 
 function fireInstantTapBeat({ announce = false } = {}) {
   const cfg = LENS_HEART_PROFILES[activeHeartProfile] || LENS_HEART_PROFILES['sleep-debt'];
+  const volSnap = getGlobalPulseSnapshot();
   if (!lensAudio) {
     lensAudio = createHeartbeatAudio();
   }
@@ -840,6 +912,7 @@ function fireInstantTapBeat({ announce = false } = {}) {
     bpm: cfg.bpm,
     onBeat: (_idx, kind) => {
       rhythmChart.triggerBeat(kind);
+      blinkGlobalPulse(kind);
       if (kind === 'lub' && cfg.bpm > CRITICAL_BPM_THRESHOLD) {
         pulseScopeThresholdBeat();
       }
@@ -848,18 +921,24 @@ function fireInstantTapBeat({ announce = false } = {}) {
 
   const latencyMs = lensAudio.getLatencyMs?.() ?? 0.4;
   if (lensAudioStateEl) {
-    lensAudioStateEl.textContent = `LIVE BEAT · ${latencyMs.toFixed(1)}MS`;
+    lensAudioStateEl.textContent = volSnap.muted
+      ? 'MUTED PULSE · 0%'
+      : `LIVE BEAT · ${latencyMs.toFixed(1)}MS`;
   }
   if (tapBeatResetTimer !== null) clearTimeout(tapBeatResetTimer);
   tapBeatResetTimer = window.setTimeout(() => {
     tapBeatResetTimer = null;
     if (!lensPlayingBoom && lensAudioStateEl) {
-      lensAudioStateEl.textContent = 'AUDIO READY';
+      lensAudioStateEl.textContent = formatReadyAudioLabel();
     }
   }, 540);
 
   if (announce) {
-    showShortcutToast(`Boom-Boom · ${cfg.bpm} BPM (${latencyMs.toFixed(1)} ms)`);
+    showShortcutToast(
+      volSnap.muted
+        ? `Silent Pulse · ${cfg.bpm} BPM (Muted)`
+        : `Boom-Boom · ${cfg.bpm} BPM (${volSnap.percent}%)`
+    );
   }
 }
 
@@ -886,9 +965,13 @@ lensBoomBtn?.addEventListener('click', () => {
     boost: true,
     onBeat: (_idx, kind) => {
       rhythmChart.triggerBeat(kind);
+      blinkGlobalPulse(kind);
       if (lensAudioStateEl) {
+        const snap = getGlobalPulseSnapshot();
         const lat = lensAudio.getLatencyMs?.() ?? 0.4;
-        lensAudioStateEl.textContent = `SURGE · ${cfg.bpm} BPM · ${lat.toFixed(1)}MS`;
+        lensAudioStateEl.textContent = snap.muted
+          ? `SILENT SURGE · ${cfg.bpm} BPM`
+          : `SURGE · ${cfg.bpm} BPM · ${lat.toFixed(1)}MS`;
       }
       if (kind === 'lub' && cfg.bpm > CRITICAL_BPM_THRESHOLD) {
         pulseScopeThresholdBeat();
@@ -897,7 +980,7 @@ lensBoomBtn?.addEventListener('click', () => {
     onDone: () => {
       lensPlayingBoom = false;
       if (lensBoomBtn) lensBoomBtn.textContent = 'Play Boom-Boom-Boom';
-      if (lensAudioStateEl) lensAudioStateEl.textContent = 'AUDIO READY';
+      if (lensAudioStateEl) lensAudioStateEl.textContent = formatReadyAudioLabel();
     },
   });
 });
@@ -1047,8 +1130,10 @@ if (safeQuery.skipIntro && introContainer) {
 }
 
 window.addEventListener('pagehide', () => {
+  unsubGlobalVolume();
   if (scopeAlertShakeTimer !== null) clearTimeout(scopeAlertShakeTimer);
   if (scopeAlertBeatTimer !== null) clearTimeout(scopeAlertBeatTimer);
+  if (pulseBlinkTimer !== null) clearTimeout(pulseBlinkTimer);
   rhythmChart.destroy();
   lensAudio?.dispose?.();
   lensAudio = null;
@@ -1261,6 +1346,25 @@ window.addEventListener('keydown', (e) => {
       e.preventDefault();
       fireInstantTapBeat({ announce: true });
       break;
+    case 'm':
+    case 'M': {
+      e.preventDefault();
+      const snap = toggleGlobalPulseMute();
+      showShortcutToast(snap.muted ? 'Pulse Audio Muted' : `Pulse Volume · ${snap.percent}%`);
+      break;
+    }
+    case '[': {
+      e.preventDefault();
+      const snap = nudgeGlobalPulseVolume(-0.1);
+      showShortcutToast(snap.muted ? 'Pulse Audio Muted' : `Pulse Volume · ${snap.percent}%`);
+      break;
+    }
+    case ']': {
+      e.preventDefault();
+      const snap = nudgeGlobalPulseVolume(0.1);
+      showShortcutToast(`Pulse Volume · ${snap.percent}%`);
+      break;
+    }
     case 'h':
       e.preventDefault();
       showShortcutToast('Opening The Living Heart…');

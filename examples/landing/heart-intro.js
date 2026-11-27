@@ -3,6 +3,13 @@ import { createScene } from '../shared/art-science/scenes/heart.js';
 import { createStudioRig } from '../shared/lighting-studio.js';
 import { disposeGroup } from '../shared/art-science/scene-kit.js';
 import { createHeartbeatAudio } from './heartbeat-audio.js';
+import {
+  getGlobalPulseSnapshot,
+  nudgeGlobalPulseVolume,
+  setGlobalPulseVolume,
+  subscribeGlobalPulseVolume,
+  toggleGlobalPulseMute,
+} from '../shared/audio-volume-store.js';
 
 function detectSoftwareWebGL() {
   try {
@@ -46,8 +53,8 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const HOLD_DURATION_MS = prefersReducedMotion ? 850 : 2100;
-  const DISSOLVE_DURATION_MS = prefersReducedMotion ? 220 : 520;
+  const HOLD_DURATION_MS = prefersReducedMotion ? 750 : 1650;
+  const DISSOLVE_DURATION_MS = prefersReducedMotion ? 200 : 420;
 
   // Build intro DOM fresh inside container
   container.hidden = false;
@@ -76,6 +83,19 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
           <span class="heart-intro-sound-icon">${ICON_SOUND_ON}</span>
           <span class="heart-intro-sound-label">Sound: On</span>
         </button>
+        <div class="heart-intro-volume" id="heart-intro-volume-wrap" title="Global boom-boom pulse volume ([ / ])">
+          <input
+            type="range"
+            id="heart-intro-volume"
+            class="pulse-volume-range"
+            min="0"
+            max="100"
+            step="1"
+            value="75"
+            aria-label="Global boom-boom pulse volume"
+          >
+          <output id="heart-intro-volume-val" class="heart-intro-volume-val" for="heart-intro-volume">75%</output>
+        </div>
         <button type="button" class="heart-intro-skip" id="heart-intro-skip">
           Skip intro
         </button>
@@ -102,6 +122,9 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
   const soundBtn = container.querySelector('#heart-intro-sound');
   const soundIconEl = soundBtn?.querySelector('.heart-intro-sound-icon');
   const soundLabelEl = soundBtn?.querySelector('.heart-intro-sound-label');
+  const introVolumeWrap = container.querySelector('#heart-intro-volume-wrap');
+  const introVolumeSlider = container.querySelector('#heart-intro-volume');
+  const introVolumeVal = container.querySelector('#heart-intro-volume-val');
 
   let disposed = false;
   let rafId = null;
@@ -147,11 +170,19 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
 
   const glCaps = detectSoftwareWebGL();
 
+  function syncIntroVolumeUi(snap = getGlobalPulseSnapshot()) {
+    if (!introVolumeSlider || !introVolumeVal) return;
+    introVolumeSlider.value = String(snap.percent);
+    introVolumeSlider.style.setProperty('--vol-pct', `${snap.percent}%`);
+    introVolumeVal.textContent = snap.muted ? 'MUTE' : `${snap.percent}%`;
+  }
+
   function updateSoundButton({ muted, suspended, boosted = false }) {
     if (!soundBtn) return;
     if (!heartbeatAudio.isSupported) {
       soundBtn.hidden = true;
       if (boostBtn) boostBtn.hidden = true;
+      if (introVolumeWrap) introVolumeWrap.hidden = true;
       return;
     }
     const active = !muted && !suspended;
@@ -171,6 +202,7 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
       boostBtn.classList.toggle('is-boosted', Boolean(boosted));
       boostBtn.hidden = muted;
     }
+    syncIntroVolumeUi();
     if (statusEl && phase === 'beating' && !prefersReducedMotion) {
       statusEl.textContent =
         !muted && suspended
@@ -187,6 +219,8 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
       if (isBoosted) boostGlow = 1;
     },
   });
+  const unsubIntroVolume = subscribeGlobalPulseVolume(syncIntroVolumeUi);
+  syncIntroVolumeUi();
   updateSoundButton({
     muted: heartbeatAudio.isMuted(),
     suspended: heartbeatAudio.isSuspended(),
@@ -200,7 +234,11 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
       await heartbeatAudio.unlock();
     }
     if (heartbeatAudio.isMuted()) {
-      await heartbeatAudio.toggleMute();
+      if (getGlobalPulseSnapshot().muted) {
+        toggleGlobalPulseMute();
+      } else {
+        await heartbeatAudio.toggleMute();
+      }
     }
     boostGlow = 1;
     if (immediateBoom || wasSuspended) {
@@ -218,7 +256,7 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
     if (disposed || phase === 'dissolving' || phase === 'done') return;
     if (
       e.target instanceof Element &&
-      e.target.closest('#heart-intro-skip, #heart-intro-sound, #heart-intro-boost')
+      e.target.closest('#heart-intro-skip, #heart-intro-sound, #heart-intro-boost, #heart-intro-volume-wrap')
     ) {
       return;
     }
@@ -227,11 +265,23 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
     }
   }
 
+  introVolumeSlider?.addEventListener('input', () => {
+    const pct = Number(introVolumeSlider.value) || 0;
+    setGlobalPulseVolume(pct / 100);
+    if (pct > 0 && heartbeatAudio.isSuspended()) {
+      heartbeatAudio.unlock();
+    }
+  });
+
   boostBtn?.addEventListener('click', () => {
     fireImpactBoost({ immediateBoom: true });
   });
   soundBtn?.addEventListener('click', () => {
-    heartbeatAudio.toggleMute();
+    if (heartbeatAudio.isSuspended() && !getGlobalPulseSnapshot().muted) {
+      heartbeatAudio.toggleMute();
+    } else {
+      toggleGlobalPulseMute();
+    }
   });
   container.addEventListener('pointerdown', onContainerPointerDown);
 
@@ -239,6 +289,7 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
     if (disposed) return;
     disposed = true;
     phase = 'done';
+    unsubIntroVolume();
 
     if (rafId !== null) {
       cancelAnimationFrame(rafId);
@@ -323,12 +374,26 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
     if (e.key === 'm' || e.key === 'M') {
       if (phase === 'loading' || phase === 'beating') {
         e.preventDefault();
-        heartbeatAudio.toggleMute();
+        toggleGlobalPulseMute();
+      }
+      return;
+    }
+    if (e.key === '[') {
+      if (phase === 'loading' || phase === 'beating') {
+        e.preventDefault();
+        nudgeGlobalPulseVolume(-0.1);
+      }
+      return;
+    }
+    if (e.key === ']') {
+      if (phase === 'loading' || phase === 'beating') {
+        e.preventDefault();
+        nudgeGlobalPulseVolume(0.1);
       }
       return;
     }
     if (
-      (e.target === soundBtn || e.target === boostBtn) &&
+      (e.target === soundBtn || e.target === boostBtn || e.target === introVolumeSlider) &&
       (e.key === 'Enter' || e.key === ' ')
     ) {
       return;

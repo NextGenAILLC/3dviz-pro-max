@@ -341,6 +341,12 @@ export async function mountScene({
     result.sync?.();
   }
 
+  const onStorageSync = () => {
+    syncAllControls();
+    updateReadouts();
+  };
+  window.addEventListener('storage', onStorageSync);
+
   if (controlsHost && typeof result.bind === 'function') {
     result.bind(controlsHost, invalidate);
   }
@@ -498,6 +504,7 @@ export async function mountScene({
     resizeObserver?.disconnect();
     desktopMedia.removeEventListener?.('change', syncLayoutSlots);
     window.removeEventListener('resize', onResize);
+    window.removeEventListener('storage', onStorageSync);
     rig.dispose();
     nightRig?.dispose();
     studio?.dispose();

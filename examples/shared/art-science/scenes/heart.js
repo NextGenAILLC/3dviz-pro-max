@@ -6,6 +6,7 @@ import {advanceCycle,cardiacCycle,heartPose} from '../body-motion.js';
 import {mergeVertices} from 'three/addons/utils/BufferGeometryUtils.js';
 import {ASSET_BASE} from '../../asset-base.js';
 import {parseSafeQuery} from '../../phi-guard.js';
+import {getGlobalPulseVolume,setGlobalPulseVolume} from '../../audio-volume-store.js';
 import {createHeartbeatAudio} from '../../../landing/heartbeat-audio.js';
 
 // Local copy under /assets/ by default; VITE_ASSET_BASE points this at the hosted bucket.
@@ -281,7 +282,7 @@ export async function createScene(){
     state.audio=!state.audio;
     if(state.audio){
      engine.unlock().then(()=>{
-      if(engine.isMuted())engine.toggleMute();
+      if(engine.isMuted()&&getGlobalPulseVolume()>0)engine.toggleMute();
       engine.setStressIntensity(LOAD_PROFILES[state.profile].intensity);
       engine.playBoomBoom({boost:true,bpm:state.rate});
      });
@@ -289,6 +290,7 @@ export async function createScene(){
      engine.toggleMute();
     }
    }},
+   {id:'heart-volume',label:'Global pulse volume (%)',type:'range',min:0,max:100,step:1,get:()=>Math.round(getGlobalPulseVolume()*100),set:v=>setGlobalPulseVolume(v/100)},
    {id:'heart-surge',label:'Trigger boom-boom-boom surge',type:'button',set:()=>{
     const engine=ensureAudio();
     const cfg=LOAD_PROFILES[state.profile]||LOAD_PROFILES.baseline;

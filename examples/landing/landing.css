@@ -241,6 +241,35 @@ select {
   background: #1a1b20;
 }
 
+.heart-intro-volume {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(17, 17, 19, 0.92);
+  border: 1px solid rgba(146, 214, 189, 0.34);
+}
+
+.heart-intro-volume[hidden] {
+  display: none;
+}
+
+.heart-intro-volume .pulse-volume-range {
+  width: 78px;
+}
+
+.heart-intro-volume-val {
+  min-width: 32px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
 .heart-intro-caption {
   position: absolute;
   left: 0;
@@ -458,6 +487,204 @@ body.intro-locked .site-shell {
 .sidebar-bottom {
   display: grid;
   gap: 10px;
+}
+
+/* Persistent Global Boom-Boom Pulse Volume Dock (Pinned along screen edge) */
+
+.global-audio-dock {
+  border: 1px solid var(--ink-faint);
+  background: var(--surface);
+  padding: 10px 12px 11px;
+  display: grid;
+  gap: 8px;
+  transition: border-color 160ms ease;
+}
+
+.global-audio-dock:hover,
+.global-audio-dock:focus-within {
+  border-color: var(--ink-border);
+}
+
+.global-audio-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.global-audio-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.pulse-blink-icon {
+  color: var(--ink-subtle);
+  flex-shrink: 0;
+  transform: scale(1);
+  transition: transform 95ms cubic-bezier(0.16, 1, 0.3, 1), color 95ms ease;
+}
+
+.pulse-blink-icon.is-blink-lub {
+  color: #e46b7b;
+  transform: scale(1.26);
+}
+
+.pulse-blink-icon.is-blink-dub {
+  color: var(--accent);
+  transform: scale(1.14);
+}
+
+.global-volume-readout {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.global-audio-dock.is-muted .global-volume-readout {
+  color: var(--ink-subtle);
+}
+
+.global-audio-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.global-volume-mute {
+  appearance: none;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--ink-faint);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease;
+}
+
+.global-volume-mute:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.global-volume-mute .vol-icon-off {
+  display: none;
+}
+
+.global-volume-mute[aria-pressed="true"] {
+  border-color: var(--ink-border);
+  color: var(--ink-subtle);
+}
+
+.global-volume-mute[aria-pressed="true"] .vol-icon-on {
+  display: none;
+}
+
+.global-volume-mute[aria-pressed="true"] .vol-icon-off {
+  display: block;
+}
+
+.pulse-volume-range {
+  --vol-pct: 75%;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 20px;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.pulse-volume-range::-webkit-slider-runnable-track {
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    var(--accent) 0%,
+    var(--accent) var(--vol-pct),
+    rgba(242, 242, 242, 0.2) var(--vol-pct),
+    rgba(242, 242, 242, 0.2) 100%
+  );
+}
+
+.pulse-volume-range::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 9px;
+  height: 15px;
+  margin-top: -6.5px;
+  background: var(--accent);
+  border: 1px solid var(--bg);
+  border-radius: 0;
+  cursor: pointer;
+  transition: background-color 140ms ease, transform 140ms ease;
+}
+
+.pulse-volume-range:hover::-webkit-slider-thumb {
+  background: var(--accent-hover);
+  transform: scaleY(1.08);
+}
+
+.pulse-volume-range::-moz-range-track {
+  height: 2px;
+  background: rgba(242, 242, 242, 0.2);
+}
+
+.pulse-volume-range::-moz-range-progress {
+  height: 2px;
+  background: var(--accent);
+}
+
+.pulse-volume-range::-moz-range-thumb {
+  width: 9px;
+  height: 15px;
+  background: var(--accent);
+  border: 1px solid var(--bg);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.global-audio-dock.is-muted .pulse-volume-range::-webkit-slider-thumb,
+.global-audio-dock.is-muted .pulse-volume-range::-moz-range-thumb {
+  background: var(--ink-subtle);
+}
+
+.global-volume-test {
+  appearance: none;
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 8px;
+  background: transparent;
+  border: 1px solid var(--ink-faint);
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease;
+}
+
+.global-volume-test:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(146, 214, 189, 0.08);
 }
 
 .main-viewport {
@@ -2092,6 +2319,7 @@ h2 {
     min-height: 100vh;
     overflow: visible;
     grid-template-columns: 1fr;
+    padding-bottom: 52px;
   }
   .sidebar {
     height: auto;
@@ -2116,6 +2344,36 @@ h2 {
   }
   .sidebar-bottom {
     grid-template-columns: 1fr 1fr;
+  }
+  .global-audio-dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 55;
+    border: 0;
+    border-top: 1px solid var(--ink-border);
+    background: rgba(17, 17, 19, 0.96);
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .global-audio-head {
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .global-audio-title span {
+    display: none;
+  }
+  .global-audio-controls {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .shortcut-toast {
+    bottom: 58px;
+    right: 14px;
   }
   .shortcuts-trigger {
     grid-column: 1 / -1;
@@ -2194,7 +2452,8 @@ h2 {
   .tactical-tooltip,
   .tactical-tooltip-meter-fill,
   .lens-scope-frame,
-  .lens-scope-alert-glow {
+  .lens-scope-alert-glow,
+  .pulse-blink-icon {
     transition: none;
     animation: none !important;
   }

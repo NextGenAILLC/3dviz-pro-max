@@ -8,7 +8,7 @@
     "fetch-assets": "bash scripts/fetch-assets.sh",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port 3000",
-    "lint": "node --check shared/standalone-runtime.js && node --check shared/phi-guard.js && node --check shared/art-science/scenes/heart.js && node --check landing/heartbeat-audio.js && node --check landing/heart-trend-tracker.js && node --check landing/heart-hrv-engine.js && node --check landing/heart-rhythm-chart.js && node --check landing/tactical-recovery.js && node --check landing/heart-intro.js && node --check landing/main.js && node --test --test-concurrency=1 shared/*.test.js shared/art-science/scenes/*.test.js shared/breadth/src/*.test.js",
+    "lint": "node --check shared/standalone-runtime.js && node --check shared/phi-guard.js && node --check shared/audio-volume-store.js && node --check shared/art-science/scenes/heart.js && node --check landing/heartbeat-audio.js && node --check landing/heart-trend-tracker.js && node --check landing/heart-hrv-engine.js && node --check landing/heart-rhythm-chart.js && node --check landing/tactical-recovery.js && node --check landing/heart-intro.js && node --check landing/main.js && node --test --test-concurrency=1 shared/*.test.js shared/art-science/scenes/*.test.js shared/breadth/src/*.test.js",
     "test": "node --test --test-concurrency=1 shared/*.test.js shared/art-science/scenes/*.test.js shared/breadth/src/*.test.js"
   },
   "dependencies": {
