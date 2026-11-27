@@ -53,8 +53,8 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const HOLD_DURATION_MS = prefersReducedMotion ? 750 : 1650;
-  const DISSOLVE_DURATION_MS = prefersReducedMotion ? 200 : 420;
+  const HOLD_DURATION_MS = prefersReducedMotion ? 450 : 1100;
+  const DISSOLVE_DURATION_MS = prefersReducedMotion ? 160 : 320;
 
   // Build intro DOM fresh inside container
   container.hidden = false;
@@ -472,7 +472,7 @@ export function mountHeartIntro({ container, onReveal, onComplete } = {}) {
     if (!disposed && phase === 'loading') {
       beginDissolve();
     }
-  }, 8000);
+  }, 2500);
 
   function renderFrame(now) {
     if (disposed) return;

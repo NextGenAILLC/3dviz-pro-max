@@ -1122,11 +1122,20 @@ for (const b of lensFilterButtons) {
 }
 applyHeartProfile(activeHeartProfile, { allowShake: false });
 
-if (safeQuery.skipIntro && introContainer) {
-  introContainer.hidden = true;
-  document.body.classList.remove('intro-locked');
-} else {
+if (safeQuery.intro && !safeQuery.skipIntro && introContainer) {
   launchHeartIntro();
+} else {
+  if (introContainer) introContainer.hidden = true;
+  document.body.classList.remove('intro-locked');
+  // Quick non-blocking arrival heartbeat blink along the screen & D3 scope
+  window.setTimeout(() => {
+    blinkGlobalPulse('lub');
+    rhythmChart.triggerBeat('lub');
+    window.setTimeout(() => {
+      blinkGlobalPulse('dub');
+      rhythmChart.triggerBeat('dub');
+    }, 185);
+  }, 90);
 }
 
 window.addEventListener('pagehide', () => {

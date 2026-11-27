@@ -350,6 +350,7 @@ body.intro-locked .site-shell {
   justify-content: space-between;
   gap: 2rem;
   height: 100vh;
+  overflow-y: auto;
   background: var(--bg);
 }
 

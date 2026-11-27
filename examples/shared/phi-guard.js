@@ -85,6 +85,7 @@ export function parseSafeQuery(search = '') {
   const rawLens = (params.get('lens') || '').toLowerCase();
 
   return {
+    intro: params.get('intro') === '1',
     skipIntro: params.get('skipIntro') === '1',
     embed: params.get('embed') === '1',
     plate: params.get('plate') === '1',
