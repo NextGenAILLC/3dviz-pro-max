@@ -1765,6 +1765,509 @@ h2 {
   color: var(--ink-muted);
 }
 
+/* --------------------------------------------------------------------------
+   Humanitarian Sustainable Project Resource Dashboard
+   -------------------------------------------------------------------------- */
+
+.humanitarian-dashboard {
+  border-bottom: 1px solid var(--ink-faint);
+}
+
+.humanitarian-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid var(--ink-faint);
+  background: var(--surface);
+}
+
+.hum-kpi {
+  padding: 1.4rem 2rem;
+  border-right: 1px solid var(--ink-faint);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.hum-kpi:last-child {
+  border-right: none;
+}
+
+.hum-kpi-val {
+  font-family: var(--font-mono);
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.hum-kpi-note {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-subtle);
+}
+
+.humanitarian-toolbar {
+  padding: 1.5rem 3.25rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.hum-filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.hum-control {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hum-control-label {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-subtle);
+}
+
+.hum-select {
+  appearance: none;
+  background-color: var(--surface);
+  background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%),
+    linear-gradient(135deg, var(--accent) 50%, transparent 50%);
+  background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  color: var(--ink);
+  border: 1px solid var(--ink-border);
+  padding: 8px 30px 8px 10px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  min-width: 152px;
+  cursor: pointer;
+}
+
+.hum-select:hover,
+.hum-select:focus-visible {
+  border-color: var(--accent);
+}
+
+.hum-search {
+  flex: 1 1 220px;
+  width: auto;
+  min-width: 200px;
+}
+
+.humanitarian-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1.25rem;
+  padding: 1.75rem 3.25rem 3.25rem;
+}
+
+.hum-card {
+  border: 1px solid var(--ink-faint);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.25rem;
+  transition: border-color 180ms ease, background-color 180ms ease;
+}
+
+.hum-card:hover {
+  border-color: var(--accent);
+  background: rgba(146, 214, 189, 0.045);
+}
+
+.hum-card[data-priority="critical"] {
+  border-top: 2px solid #ff6f80;
+}
+
+.hum-card[data-priority="high"] {
+  border-top: 2px solid #e2a568;
+}
+
+.hum-card[data-priority="standard"] {
+  border-top: 2px solid var(--accent);
+}
+
+.hum-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.hum-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hum-card-meta {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-subtle);
+}
+
+.hum-priority {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.hum-priority--critical {
+  color: #ff6f80;
+}
+
+.hum-priority--high {
+  color: #e2a568;
+}
+
+.hum-priority--standard {
+  color: var(--accent);
+}
+
+.hum-card-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.18rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.hum-card-summary {
+  margin: 0;
+  font-size: 0.83rem;
+  line-height: 1.54;
+  color: var(--ink-muted);
+}
+
+.hum-specs {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--ink-faint);
+  border-bottom: 1px solid var(--ink-faint);
+}
+
+.hum-spec {
+  padding: 0.65rem 0.6rem 0.65rem 0;
+  border-right: 1px solid var(--ink-faint);
+}
+
+.hum-spec:not(:first-child) {
+  padding-left: 0.75rem;
+}
+
+.hum-spec:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+.hum-spec dt {
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-subtle);
+  margin-bottom: 3px;
+}
+
+.hum-spec dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.hum-readiness {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hum-readiness-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
+
+.hum-local-rate {
+  color: var(--accent);
+}
+
+.hum-readiness-track {
+  width: 100%;
+  height: 3px;
+  background: rgba(242, 242, 242, 0.1);
+  overflow: hidden;
+}
+
+.hum-readiness-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 220ms ease;
+}
+
+.hum-power-note {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  color: var(--ink-subtle);
+}
+
+.hum-resources {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 0.35rem;
+}
+
+.hum-resources-heading {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-subtle);
+}
+
+.hum-resource-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hum-resource-list li {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.78rem;
+  padding-bottom: 5px;
+  border-bottom: 1px dashed rgba(242, 242, 242, 0.08);
+}
+
+.hum-resource-list li:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.hum-res-qty {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.hum-res-item {
+  color: var(--ink);
+  min-width: 0;
+}
+
+.hum-res-cat {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-subtle);
+  white-space: nowrap;
+}
+
+.humanitarian-empty {
+  grid-column: 1 / -1;
+  padding: 2.75rem 2rem;
+  border: 1px solid var(--ink-faint);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  text-align: center;
+}
+
+.humanitarian-empty p {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+
+/* Humanitarian Kit Inspection Dialog */
+
+.humanitarian-dialog {
+  width: min(780px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100vh - 32px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--accent);
+  background: var(--bg);
+  color: var(--ink);
+  overflow: hidden;
+  display: none;
+  flex-direction: column;
+}
+
+.humanitarian-dialog[open] {
+  display: flex;
+}
+
+.humanitarian-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.82);
+}
+
+.hum-dialog-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hum-dialog-body {
+  padding: 1.5rem 1.75rem 1.75rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+}
+
+.hum-dialog-summary {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+
+.hum-dialog-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border: 1px solid var(--ink-faint);
+  background: var(--surface);
+}
+
+.hum-dialog-metric {
+  padding: 0.85rem 0.9rem;
+  border-right: 1px solid var(--ink-faint);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hum-dialog-metric:last-child {
+  border-right: none;
+}
+
+.hum-dialog-metric strong {
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.hum-dialog-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.hum-manifest-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  border: 1px solid var(--ink-faint);
+}
+
+.hum-manifest-table th,
+.hum-manifest-table td {
+  text-align: left;
+  padding: 0.65rem 0.8rem;
+  border-bottom: 1px solid var(--ink-faint);
+}
+
+.hum-manifest-table th {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-subtle);
+  background: var(--surface);
+}
+
+.hum-manifest-table tr:last-child td {
+  border-bottom: none;
+}
+
+.hum-manifest-qty {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.hum-manifest-item {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.hum-manifest-cat {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  color: var(--ink-subtle);
+}
+
+.hum-manifest-spec {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--ink-muted);
+}
+
+.hum-dialog-sustainability {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--ink-faint);
+}
+
+.hum-dialog-sustainability p {
+  margin: 0.3rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+
 /* Catalog Toolbar & Grid */
 
 .study-toolbar {
@@ -2286,11 +2789,13 @@ h2 {
     padding: 2.5rem;
   }
   .stats-strip,
+  .humanitarian-kpi-strip,
   .workflow-grid,
   .directions-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .stat-item,
+  .hum-kpi,
   .workflow-step,
   .direction-group {
     border-bottom: 1px solid var(--ink-faint);
@@ -2311,6 +2816,9 @@ h2 {
   }
   .tactical-components {
     padding: 2.25rem 2.5rem;
+  }
+  .hum-dialog-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -2391,6 +2899,8 @@ h2 {
   .redacted-boundary,
   .heart-lens-deck,
   .tactical-components,
+  .humanitarian-toolbar,
+  .humanitarian-grid,
   .study-toolbar,
   .content-grid,
   .bento-section,
@@ -2399,8 +2909,23 @@ h2 {
     padding-left: 1.5rem;
     padding-right: 1.5rem;
   }
+  .humanitarian-grid {
+    grid-template-columns: 1fr;
+  }
+  .hum-dialog-metrics,
+  .hum-dialog-sustainability {
+    grid-template-columns: 1fr;
+  }
+  .hum-dialog-metric {
+    border-right: none;
+    border-bottom: 1px solid var(--ink-faint);
+  }
+  .hum-dialog-metric:last-child {
+    border-bottom: none;
+  }
   .gallery-grid,
   .stats-strip,
+  .humanitarian-kpi-strip,
   .workflow-grid,
   .directions-grid,
   .tactical-grid,
@@ -2418,6 +2943,7 @@ h2 {
     grid-column: span 1;
   }
   .stat-item,
+  .hum-kpi,
   .workflow-step,
   .direction-group {
     border-right: none;
@@ -2447,6 +2973,8 @@ h2 {
   .heart-intro,
   .site-shell,
   .card,
+  .hum-card,
+  .hum-readiness-fill,
   .gallery-item img,
   .shortcut-toast,
   .stat-tooltip,

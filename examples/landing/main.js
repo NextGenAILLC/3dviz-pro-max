@@ -11,6 +11,15 @@ import {
 } from '../shared/audio-volume-store.js';
 import { mountHeartRhythmChart } from './heart-rhythm-chart.js';
 import { getTacticalRecoverySnapshot } from './tactical-recovery.js';
+import {
+  HUMANITARIAN_PROJECTS,
+  HUMANITARIAN_SECTORS,
+  buildProjectManifestCsv,
+  filterHumanitarianProjects,
+  formatBudgetUsdK,
+  getHumanitarianRegions,
+  summarizeHumanitarianPortfolio,
+} from './humanitarian-resources.js';
 
 const CHAPTERS = [
   {
@@ -292,12 +301,459 @@ searchInput?.addEventListener('input', (e) => {
 renderTabs();
 renderStudies();
 
+// --------------------------------------------------------------------------
+// Humanitarian Resource Dashboard (Sustainable Field Logistics)
+// --------------------------------------------------------------------------
+const humSectorTabsHost = document.getElementById('hum-sector-tabs');
+const humRegionSelect = document.getElementById('hum-region-select');
+const humPrioritySelect = document.getElementById('hum-priority-select');
+const humSortSelect = document.getElementById('hum-sort-select');
+const humSearchInput = document.getElementById('hum-search');
+const humResetBtn = document.getElementById('hum-reset-filters');
+const humGridHost = document.getElementById('humanitarian-grid');
+
+const humKpiProjects = document.getElementById('hum-kpi-projects');
+const humKpiProjectsNote = document.getElementById('hum-kpi-projects-note');
+const humKpiBudget = document.getElementById('hum-kpi-budget');
+const humKpiBudgetNote = document.getElementById('hum-kpi-budget-note');
+const humKpiCarbon = document.getElementById('hum-kpi-carbon');
+const humKpiCarbonNote = document.getElementById('hum-kpi-carbon-note');
+const humKpiReadiness = document.getElementById('hum-kpi-readiness');
+const humKpiReadinessNote = document.getElementById('hum-kpi-readiness-note');
+
+const humDialogEl = document.getElementById('humanitarian-dialog');
+const humDialogMeta = document.getElementById('hum-dialog-meta');
+const humDialogTitle = document.getElementById('hum-dialog-title');
+const humDialogSummary = document.getElementById('hum-dialog-summary');
+const humDialogBudget = document.getElementById('hum-dialog-budget');
+const humDialogTimeline = document.getElementById('hum-dialog-timeline');
+const humDialogReadiness = document.getElementById('hum-dialog-readiness');
+const humDialogCarbon = document.getElementById('hum-dialog-carbon');
+const humDialogLocal = document.getElementById('hum-dialog-local');
+const humDialogResources = document.getElementById('hum-dialog-resources');
+const humDialogRenewable = document.getElementById('hum-dialog-renewable');
+const humDialogNote = document.getElementById('hum-dialog-note');
+const humDialogExport = document.getElementById('hum-dialog-export');
+const humDialogPreview = document.getElementById('hum-dialog-preview');
+const humDialogClose = document.getElementById('hum-dialog-close');
+
+const PRIORITY_GLYPH = {
+  critical: '●',
+  high: '▲',
+  standard: '○',
+};
+
+const humState = {
+  sector: 'all',
+  region: 'all',
+  priority: 'all',
+  query: '',
+  sortBy: 'priority',
+};
+
+let activeHumDialogProject = null;
+
+function populateHumanitarianRegions() {
+  if (!humRegionSelect) return;
+  const regions = getHumanitarianRegions(HUMANITARIAN_PROJECTS);
+  for (const region of regions) {
+    const opt = document.createElement('option');
+    opt.value = region;
+    opt.textContent = region;
+    humRegionSelect.append(opt);
+  }
+}
+
+function hasActiveHumanitarianFilters() {
+  return (
+    humState.sector !== 'all' ||
+    humState.region !== 'all' ||
+    humState.priority !== 'all' ||
+    humState.query.trim().length > 0 ||
+    humState.sortBy !== 'priority'
+  );
+}
+
+function resetHumanitarianFilters() {
+  humState.sector = 'all';
+  humState.region = 'all';
+  humState.priority = 'all';
+  humState.query = '';
+  humState.sortBy = 'priority';
+  if (humRegionSelect) humRegionSelect.value = 'all';
+  if (humPrioritySelect) humPrioritySelect.value = 'all';
+  if (humSortSelect) humSortSelect.value = 'priority';
+  if (humSearchInput) humSearchInput.value = '';
+  renderHumanitarianSectorTabs();
+  renderHumanitarianDashboard();
+}
+
+function renderHumanitarianSectorTabs() {
+  if (!humSectorTabsHost) return;
+  humSectorTabsHost.textContent = '';
+
+  for (const sector of HUMANITARIAN_SECTORS) {
+    const count =
+      sector.id === 'all'
+        ? HUMANITARIAN_PROJECTS.length
+        : HUMANITARIAN_PROJECTS.filter((p) => p.sector === sector.id).length;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chapter-tab';
+    btn.setAttribute('aria-pressed', String(humState.sector === sector.id));
+    btn.textContent = `${sector.label} (${count})`;
+    btn.addEventListener('click', () => {
+      humState.sector = sector.id;
+      renderHumanitarianSectorTabs();
+      renderHumanitarianDashboard();
+    });
+    humSectorTabsHost.append(btn);
+  }
+}
+
+function openHumanitarianStudyPreview(project) {
+  if (!project) return;
+  const linkedStudy = STUDIES.find((s) => s.id === project.studyId);
+  if (!linkedStudy) return;
+  if (humDialogEl?.open) humDialogEl.close();
+  openStudyModal(linkedStudy);
+}
+
+function exportHumanitarianManifestCsv(project) {
+  if (!project) return;
+  const csv = buildProjectManifestCsv(project);
+  if (!csv) return;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${project.code.toLowerCase()}-resource-manifest.csv`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showShortcutToast(`Exported ${project.code} manifest CSV`);
+}
+
+function openHumanitarianDialog(project) {
+  if (!humDialogEl || !project) return;
+  activeHumDialogProject = project;
+  if (humDialogMeta) {
+    humDialogMeta.textContent = `${project.code} · ${project.sectorLabel} · ${project.region}`;
+  }
+  if (humDialogTitle) humDialogTitle.textContent = project.title;
+  if (humDialogSummary) humDialogSummary.textContent = project.summary;
+  if (humDialogBudget) humDialogBudget.textContent = formatBudgetUsdK(project.budgetUsdK);
+  if (humDialogTimeline) humDialogTimeline.textContent = `${project.timelineDays} days`;
+  if (humDialogReadiness) humDialogReadiness.textContent = `${project.readinessPct}%`;
+  if (humDialogCarbon) humDialogCarbon.textContent = `${project.carbonOffsetTons} tCO₂e/yr`;
+  if (humDialogLocal) humDialogLocal.textContent = `${project.localSourcingPct}%`;
+  if (humDialogRenewable) humDialogRenewable.textContent = project.renewableSource;
+  if (humDialogNote) humDialogNote.textContent = project.sustainabilityNote;
+
+  if (humDialogResources) {
+    humDialogResources.textContent = '';
+    for (const r of project.resources) {
+      const tr = document.createElement('tr');
+
+      const tdQty = document.createElement('td');
+      tdQty.className = 'hum-manifest-qty';
+      tdQty.textContent = r.qty;
+
+      const tdItem = document.createElement('td');
+      tdItem.className = 'hum-manifest-item';
+      tdItem.textContent = r.item;
+
+      const tdCat = document.createElement('td');
+      tdCat.className = 'hum-manifest-cat';
+      tdCat.textContent = r.category;
+
+      const tdSpec = document.createElement('td');
+      tdSpec.className = 'hum-manifest-spec';
+      tdSpec.textContent = r.spec;
+
+      tr.append(tdQty, tdItem, tdCat, tdSpec);
+      humDialogResources.append(tr);
+    }
+  }
+
+  const linkedStudy = STUDIES.find((s) => s.id === project.studyId);
+  if (humDialogPreview) {
+    humDialogPreview.hidden = !linkedStudy;
+    humDialogPreview.textContent = project.studyLabel || 'Preview 3D';
+  }
+
+  humDialogEl.showModal();
+}
+
+function closeHumanitarianDialog() {
+  if (!humDialogEl || !humDialogEl.open) return;
+  humDialogEl.close();
+}
+
+humDialogClose?.addEventListener('click', closeHumanitarianDialog);
+humDialogEl?.addEventListener('click', (e) => {
+  if (e.target === humDialogEl) closeHumanitarianDialog();
+});
+humDialogExport?.addEventListener('click', () => {
+  if (activeHumDialogProject) exportHumanitarianManifestCsv(activeHumDialogProject);
+});
+humDialogPreview?.addEventListener('click', () => {
+  if (activeHumDialogProject) openHumanitarianStudyPreview(activeHumDialogProject);
+});
+
+function renderHumanitarianDashboard() {
+  if (!humGridHost) return;
+
+  const matches = filterHumanitarianProjects(HUMANITARIAN_PROJECTS, humState);
+  const summary = summarizeHumanitarianPortfolio(matches);
+
+  if (humKpiProjects) humKpiProjects.textContent = String(summary.projectCount);
+  if (humKpiProjectsNote) {
+    humKpiProjectsNote.textContent =
+      summary.projectCount > 0
+        ? `${summary.criticalCount} critical · ${summary.totalResourceItems} kit line items`
+        : 'No matching field deployments';
+  }
+  if (humKpiBudget) humKpiBudget.textContent = formatBudgetUsdK(summary.totalBudgetUsdK);
+  if (humKpiBudgetNote) {
+    humKpiBudgetNote.textContent =
+      summary.projectCount > 0
+        ? `Fastest dispatch: ${summary.fastestDeployDays}d`
+        : 'Adjust sector or region filter';
+  }
+  if (humKpiCarbon) humKpiCarbon.textContent = `${summary.totalCarbonOffsetTons} tCO₂e`;
+  if (humKpiCarbonNote) {
+    humKpiCarbonNote.textContent =
+      summary.projectCount > 0
+        ? 'Annual renewable & material offset'
+        : '0 tCO₂e in current view';
+  }
+  if (humKpiReadiness) humKpiReadiness.textContent = `${summary.avgReadinessPct}%`;
+  if (humKpiReadinessNote) {
+    humKpiReadinessNote.textContent =
+      summary.projectCount > 0
+        ? `${summary.avgLocalSourcingPct}% avg local sourcing`
+        : 'Reset filters to restore all 8 projects';
+  }
+
+  if (humResetBtn) {
+    humResetBtn.hidden = !hasActiveHumanitarianFilters();
+  }
+
+  humGridHost.textContent = '';
+
+  if (matches.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'humanitarian-empty';
+
+    const msg = document.createElement('p');
+    msg.textContent = 'No sustainable humanitarian projects match the current filter criteria.';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-primary btn-compact';
+    btn.textContent = 'Reset All Filters';
+    btn.addEventListener('click', resetHumanitarianFilters);
+
+    empty.append(msg, btn);
+    humGridHost.append(empty);
+    return;
+  }
+
+  for (const project of matches) {
+    const card = document.createElement('article');
+    card.className = 'hum-card';
+    card.dataset.priority = project.priority;
+
+    // Header row: Sector + Region on left, text-first urgency label on right
+    const head = document.createElement('div');
+    head.className = 'hum-card-head';
+
+    const meta = document.createElement('span');
+    meta.className = 'hum-card-meta';
+    meta.textContent = `${project.sectorLabel} · ${project.region}`;
+
+    const priority = document.createElement('span');
+    priority.className = `hum-priority hum-priority--${project.priority}`;
+    priority.textContent = `${PRIORITY_GLYPH[project.priority] || '○'} ${project.priorityLabel}`;
+
+    head.append(meta, priority);
+
+    // Title & summary
+    const title = document.createElement('h3');
+    title.className = 'hum-card-title';
+    title.textContent = project.title;
+
+    const summaryEl = document.createElement('p');
+    summaryEl.className = 'hum-card-summary';
+    summaryEl.textContent = project.summary;
+
+    // 3-column tabular spec strip (Budget / Timeline / Carbon Offset)
+    const specs = document.createElement('dl');
+    specs.className = 'hum-specs';
+
+    const specPairs = [
+      ['Budget', formatBudgetUsdK(project.budgetUsdK)],
+      ['Deploy', `${project.timelineDays}d`],
+      ['Offset', `${project.carbonOffsetTons} tCO₂e/yr`],
+    ];
+    for (const [k, v] of specPairs) {
+      const cell = document.createElement('div');
+      cell.className = 'hum-spec';
+      const dt = document.createElement('dt');
+      dt.textContent = k;
+      const dd = document.createElement('dd');
+      dd.textContent = v;
+      cell.append(dt, dd);
+      specs.append(cell);
+    }
+
+    // Readiness progress & renewable energy source
+    const sustainability = document.createElement('div');
+    sustainability.className = 'hum-readiness';
+
+    const readinessHead = document.createElement('div');
+    readinessHead.className = 'hum-readiness-head';
+
+    const readinessLabel = document.createElement('span');
+    readinessLabel.textContent = `Kit Readiness ${project.readinessPct}%`;
+
+    const localLabel = document.createElement('span');
+    localLabel.className = 'hum-local-rate';
+    localLabel.textContent = `${project.localSourcingPct}% Local Sourcing`;
+
+    readinessHead.append(readinessLabel, localLabel);
+
+    const track = document.createElement('div');
+    track.className = 'hum-readiness-track';
+    track.setAttribute('aria-hidden', 'true');
+
+    const fill = document.createElement('div');
+    fill.className = 'hum-readiness-fill';
+    fill.style.width = `${project.readinessPct}%`;
+    track.append(fill);
+
+    const powerNote = document.createElement('span');
+    powerNote.className = 'hum-power-note';
+    powerNote.textContent = project.renewableSource;
+
+    sustainability.append(readinessHead, track, powerNote);
+
+    // Itemized resource requirements list (scannable tabular quantities)
+    const resSection = document.createElement('div');
+    resSection.className = 'hum-resources';
+
+    const resHeading = document.createElement('span');
+    resHeading.className = 'hum-resources-heading';
+    resHeading.textContent = 'Primary Resource Requirements';
+
+    const resList = document.createElement('ul');
+    resList.className = 'hum-resource-list';
+
+    for (const r of project.resources) {
+      const li = document.createElement('li');
+
+      const qty = document.createElement('span');
+      qty.className = 'hum-res-qty';
+      qty.textContent = r.qty;
+
+      const name = document.createElement('span');
+      name.className = 'hum-res-item';
+      name.textContent = r.item;
+
+      const cat = document.createElement('span');
+      cat.className = 'hum-res-cat';
+      cat.textContent = r.category;
+
+      li.append(qty, name, cat);
+      resList.append(li);
+    }
+
+    resSection.append(resHeading, resList);
+
+    // Footer actions + project code
+    const footer = document.createElement('div');
+    footer.className = 'card-footer hum-card-footer';
+
+    const actions = document.createElement('div');
+    actions.className = 'card-actions';
+
+    const inspectBtn = document.createElement('button');
+    inspectBtn.type = 'button';
+    inspectBtn.className = 'btn btn-primary';
+    inspectBtn.textContent = 'Inspect Kit';
+    inspectBtn.addEventListener('click', () => openHumanitarianDialog(project));
+    actions.append(inspectBtn);
+
+    const linkedStudy = STUDIES.find((s) => s.id === project.studyId);
+    if (linkedStudy) {
+      const previewBtn = document.createElement('button');
+      previewBtn.type = 'button';
+      previewBtn.className = 'btn';
+      previewBtn.textContent = '3D Ref';
+      previewBtn.title = project.studyLabel || linkedStudy.title;
+      previewBtn.addEventListener('click', () => openHumanitarianStudyPreview(project));
+      actions.append(previewBtn);
+    }
+
+    const codeSpan = document.createElement('span');
+    codeSpan.className = 'card-code';
+    codeSpan.textContent = project.code;
+
+    footer.append(actions, codeSpan);
+
+    const body = document.createElement('div');
+    body.className = 'hum-card-body';
+    body.append(head, title, summaryEl, specs, sustainability, resSection);
+
+    card.append(body, footer);
+    humGridHost.append(card);
+  }
+}
+
+humRegionSelect?.addEventListener('change', (e) => {
+  humState.region = e.target.value || 'all';
+  renderHumanitarianDashboard();
+});
+
+humPrioritySelect?.addEventListener('change', (e) => {
+  humState.priority = e.target.value || 'all';
+  renderHumanitarianDashboard();
+});
+
+humSortSelect?.addEventListener('change', (e) => {
+  humState.sortBy = e.target.value || 'priority';
+  renderHumanitarianDashboard();
+});
+
+humSearchInput?.addEventListener('input', (e) => {
+  const raw = e.target.value || '';
+  const guarded = redactPhi(raw);
+  if (guarded.blocked) {
+    e.target.value = guarded.sanitized;
+    showShortcutToast('Sensitive identifier blocked · aggregate planning only');
+  }
+  humState.query = guarded.sanitized;
+  renderHumanitarianDashboard();
+});
+
+humResetBtn?.addEventListener('click', resetHumanitarianFilters);
+
+populateHumanitarianRegions();
+renderHumanitarianSectorTabs();
+renderHumanitarianDashboard();
+
 // Smooth section scrolling within .main-viewport & active sidebar highlight
 const mainViewport = document.getElementById('main-viewport');
 const navLinks = Array.from(document.querySelectorAll('.nav-list a[data-nav-link]'));
 const sectionTargets = {
   top: { el: document.getElementById('top'), label: '00 / TOP' },
   'tactical-lens': { el: document.getElementById('tactical-lens'), label: 'TACTICAL LENS' },
+  'humanitarian-dashboard': {
+    el: document.getElementById('humanitarian-dashboard'),
+    label: 'HUMANITARIAN RESOURCES',
+  },
   studies: { el: document.getElementById('studies'), label: '01 / STUDIES' },
   showcase: { el: document.getElementById('showcase'), label: '02 / SHOWCASE' },
   workflow: { el: document.getElementById('workflow'), label: '03 / WORKFLOW' },
@@ -334,7 +790,14 @@ for (const link of document.querySelectorAll('[data-nav-link]')) {
 }
 
 if (typeof IntersectionObserver !== 'undefined') {
-  const observedIds = ['tactical-lens', 'studies', 'showcase', 'workflow', 'directions'];
+  const observedIds = [
+    'tactical-lens',
+    'humanitarian-dashboard',
+    'studies',
+    'showcase',
+    'workflow',
+    'directions',
+  ];
   const observer = new IntersectionObserver(
     (entries) => {
       const visible = entries
@@ -1297,8 +1760,13 @@ window.addEventListener('keydown', (e) => {
       closeShortcutsDialog();
       return;
     }
-    if (document.activeElement === searchInput) {
-      searchInput.blur();
+    if (humDialogEl?.open) {
+      e.preventDefault();
+      closeHumanitarianDialog();
+      return;
+    }
+    if (document.activeElement === searchInput || document.activeElement === humSearchInput) {
+      document.activeElement.blur();
       return;
     }
     return;
@@ -1308,13 +1776,13 @@ window.addEventListener('keydown', (e) => {
 
   if (e.key === '?') {
     e.preventDefault();
-    if (dialogEl?.open) return;
+    if (dialogEl?.open || humDialogEl?.open) return;
     if (shortcutsDialog?.open) closeShortcutsDialog();
     else openShortcutsDialog();
     return;
   }
 
-  if (dialogEl?.open || shortcutsDialog?.open) return;
+  if (dialogEl?.open || shortcutsDialog?.open || humDialogEl?.open) return;
 
   switch (e.key) {
     case '0':
@@ -1327,6 +1795,10 @@ window.addEventListener('keydown', (e) => {
     case 'L':
       e.preventDefault();
       scrollToSection('tactical-lens', { announce: true });
+      break;
+    case '5':
+      e.preventDefault();
+      scrollToSection('humanitarian-dashboard', { announce: true });
       break;
     case '1':
       e.preventDefault();

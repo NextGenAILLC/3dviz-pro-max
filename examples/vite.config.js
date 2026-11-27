@@ -21,7 +21,12 @@ function collectHtmlInputs() {
 }
 
 const assetProxy = {
-  '/assets': {
+  '/assets/heart': {
+    target: 'https://assets.3dviz.dev',
+    changeOrigin: true,
+    rewrite: (reqPath) => reqPath.replace(/^\/assets/, ''),
+  },
+  '/assets/anatomy': {
     target: 'https://assets.3dviz.dev',
     changeOrigin: true,
     rewrite: (reqPath) => reqPath.replace(/^\/assets/, ''),
@@ -42,6 +47,8 @@ export default defineConfig({
     proxy: assetProxy,
   },
   build: {
+    outDir: path.resolve(rootDir, '../dist'),
+    emptyOutDir: true,
     rollupOptions: {
       input: collectHtmlInputs(),
     },

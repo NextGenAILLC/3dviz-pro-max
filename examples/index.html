@@ -39,6 +39,7 @@
         <nav aria-label="Primary">
           <ul class="nav-list">
             <li><a href="#tactical-lens" data-nav-link><span>Tactical Lens</span><kbd class="kbd-hint">L</kbd></a></li>
+            <li><a href="#humanitarian-dashboard" data-nav-link><span>Humanitarian</span><kbd class="kbd-hint">5</kbd></a></li>
             <li><a href="#studies" data-nav-link><span>01 Studies</span><kbd class="kbd-hint">1</kbd></a></li>
             <li><a href="#showcase" data-nav-link><span>02 Showcase</span><kbd class="kbd-hint">2</kbd></a></li>
             <li><a href="#workflow" data-nav-link><span>03 Workflow</span><kbd class="kbd-hint">3</kbd></a></li>
@@ -287,6 +288,87 @@
         </div>
       </section>
 
+      <section id="humanitarian-dashboard" class="humanitarian-dashboard" aria-labelledby="humanitarian-heading">
+        <div class="section-header">
+          <div class="section-header-copy">
+            <span class="label">Humanitarian Operations · Sustainable Field Logistics</span>
+            <h2 id="humanitarian-heading">Sustainable Project Resource Dashboard</h2>
+          </div>
+          <p class="section-subtitle">
+            Filter active field initiatives by sector, region, and deployment urgency to review modular equipment kits, local sourcing ratios, renewable power specs, and carbon offsets.
+          </p>
+        </div>
+
+        <div class="redacted-boundary" role="note" aria-label="Aggregate humanitarian data privacy boundary">
+          <span>SCOPE: AGGREGATE REGIONAL LOGISTICS ONLY</span>
+          <span>ZERO BENEFICIARY PII / PHI · SYNTHETIC PLANNING DATASET · RBAC READY</span>
+        </div>
+
+        <div class="humanitarian-kpi-strip" aria-label="Filtered portfolio summary">
+          <div class="hum-kpi">
+            <span class="label">Matching Projects</span>
+            <strong class="hum-kpi-val" id="hum-kpi-projects">8</strong>
+            <span class="hum-kpi-note" id="hum-kpi-projects-note">2 critical · 32 kit line items</span>
+          </div>
+          <div class="hum-kpi">
+            <span class="label">Allocated Budget</span>
+            <strong class="hum-kpi-val" id="hum-kpi-budget">$1.12M</strong>
+            <span class="hum-kpi-note" id="hum-kpi-budget-note">Fastest dispatch: 7d</span>
+          </div>
+          <div class="hum-kpi">
+            <span class="label">Annual Carbon Offset</span>
+            <strong class="hum-kpi-val" id="hum-kpi-carbon">408 tCO₂e</strong>
+            <span class="hum-kpi-note" id="hum-kpi-carbon-note">Diesel &amp; cement displacement</span>
+          </div>
+          <div class="hum-kpi">
+            <span class="label">Avg Field Readiness</span>
+            <strong class="hum-kpi-val" id="hum-kpi-readiness">84%</strong>
+            <span class="hum-kpi-note" id="hum-kpi-readiness-note">76% avg local sourcing</span>
+          </div>
+        </div>
+
+        <div class="humanitarian-toolbar">
+          <div class="chapter-tabs" id="hum-sector-tabs" role="group" aria-label="Filter projects by humanitarian sector"></div>
+          <div class="hum-filter-controls">
+            <label class="hum-control">
+              <span class="hum-control-label">Region</span>
+              <select id="hum-region-select" class="hum-select" aria-label="Filter projects by region">
+                <option value="all">All Regions</option>
+              </select>
+            </label>
+            <label class="hum-control">
+              <span class="hum-control-label">Urgency</span>
+              <select id="hum-priority-select" class="hum-select" aria-label="Filter projects by urgency">
+                <option value="all">All Urgency</option>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="standard">Standard</option>
+              </select>
+            </label>
+            <label class="hum-control">
+              <span class="hum-control-label">Sort</span>
+              <select id="hum-sort-select" class="hum-select" aria-label="Sort humanitarian projects">
+                <option value="priority">Urgency first</option>
+                <option value="readiness">Readiness (high–low)</option>
+                <option value="carbon-desc">Carbon offset (high–low)</option>
+                <option value="timeline-asc">Fastest deployment</option>
+                <option value="budget-asc">Budget (low–high)</option>
+              </select>
+            </label>
+            <input
+              type="search"
+              id="hum-search"
+              class="study-search hum-search"
+              placeholder="Search resource, kit, region…"
+              aria-label="Search sustainable project resources"
+            >
+            <button type="button" id="hum-reset-filters" class="btn btn-compact" hidden>Reset</button>
+          </div>
+        </div>
+
+        <div class="humanitarian-grid" id="humanitarian-grid" aria-live="polite"></div>
+      </section>
+
       <section id="studies" aria-labelledby="studies-heading">
         <div class="section-header">
           <div class="section-header-copy">
@@ -519,6 +601,73 @@
     <iframe id="study-dialog-frame" class="study-dialog-frame" title="Interactive 3D study preview" src="about:blank"></iframe>
   </dialog>
 
+  <!-- Humanitarian Resource Kit Inspection Modal -->
+  <dialog id="humanitarian-dialog" class="humanitarian-dialog" aria-labelledby="hum-dialog-title">
+    <div class="study-dialog-head">
+      <div class="hum-dialog-heading">
+        <span class="label" id="hum-dialog-meta">PRJ-WSH-01 · EAST AFRICA</span>
+        <h2 id="hum-dialog-title" class="study-dialog-title">Project Resource Kit</h2>
+      </div>
+      <div class="study-dialog-actions">
+        <button type="button" id="hum-dialog-export" class="btn btn-compact">Export CSV</button>
+        <button type="button" id="hum-dialog-preview" class="btn btn-primary btn-compact">Preview 3D</button>
+        <button type="button" id="hum-dialog-close" class="study-dialog-close">Close</button>
+      </div>
+    </div>
+    <div class="hum-dialog-body">
+      <p class="hum-dialog-summary" id="hum-dialog-summary"></p>
+
+      <div class="hum-dialog-metrics">
+        <div class="hum-dialog-metric">
+          <span class="label">Budget</span>
+          <strong id="hum-dialog-budget"></strong>
+        </div>
+        <div class="hum-dialog-metric">
+          <span class="label">Deploy Window</span>
+          <strong id="hum-dialog-timeline"></strong>
+        </div>
+        <div class="hum-dialog-metric">
+          <span class="label">Readiness</span>
+          <strong id="hum-dialog-readiness"></strong>
+        </div>
+        <div class="hum-dialog-metric">
+          <span class="label">Carbon Offset</span>
+          <strong id="hum-dialog-carbon"></strong>
+        </div>
+        <div class="hum-dialog-metric">
+          <span class="label">Local Sourcing</span>
+          <strong id="hum-dialog-local"></strong>
+        </div>
+      </div>
+
+      <div class="hum-dialog-section">
+        <span class="label">Itemized Resource Requirements</span>
+        <table class="hum-manifest-table">
+          <thead>
+            <tr>
+              <th>Qty</th>
+              <th>Resource Item</th>
+              <th>Category</th>
+              <th>Field Specification</th>
+            </tr>
+          </thead>
+          <tbody id="hum-dialog-resources"></tbody>
+        </table>
+      </div>
+
+      <div class="hum-dialog-sustainability">
+        <div>
+          <span class="label">Renewable Power / System</span>
+          <p id="hum-dialog-renewable"></p>
+        </div>
+        <div>
+          <span class="label">Sustainability &amp; Redaction Audit</span>
+          <p id="hum-dialog-note"></p>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Keyboard Shortcuts Reference Modal -->
   <dialog id="shortcuts-dialog" class="shortcuts-dialog" aria-labelledby="shortcuts-dialog-title">
     <div class="study-dialog-head">
@@ -531,6 +680,7 @@
         <ul class="shortcuts-list">
           <li><span>Jump to top</span><span class="shortcut-keys"><kbd>0</kbd> <span class="shortcut-or">or</span> <kbd>T</kbd></span></li>
           <li><span>Tactical &amp; Athletic Lens</span><kbd>L</kbd></li>
+          <li><span>Humanitarian Resources</span><kbd>5</kbd></li>
           <li><span>01 Studies Catalog</span><kbd>1</kbd></li>
           <li><span>02 Runtime Showcase</span><kbd>2</kbd></li>
           <li><span>03 Skill Workflow</span><kbd>3</kbd></li>
